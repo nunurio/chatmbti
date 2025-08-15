@@ -394,154 +394,552 @@ interface MigrationCheckResponse {
 
 ### Supabaseデータベーススキーマ
 
-#### 1. プロフィールテーブル
+このプロジェクトでは、以下のPostgreSQL拡張・ENUM型・テーブル群・関数・RLSを採用します。提示のスキーマはSupabase標準の`auth.users`と連携し、厳格なRLSでセキュリティを担保します。
+
+#### 0) 拡張
 ```sql
--- profiles テーブル（auth.usersの拡張）
-CREATE TABLE public.profiles (
-  id UUID REFERENCES auth.users(id) PRIMARY KEY,
-  email TEXT,
-  mbti TEXT CHECK (mbti IN (
-    'INTJ', 'INTP', 'ENTJ', 'ENTP',
-    'INFJ', 'INFP', 'ENFJ', 'ENFP',
-    'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ',
-    'ISTP', 'ISFP', 'ESTP', 'ESFP'
-  )),
-  language TEXT DEFAULT 'ja' CHECK (language IN ('ja', 'en')),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+create extension if not exists pgcrypto;
+create extension if not exists citext;
+```
+
+#### 1) ENUM 型
+```sql
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'mbti_code') then
+    create type mbti_code as enum (
+      'INTJ','INTP','ENTJ','ENTP','INFJ','INFP','ENFJ','ENFP',
+      'ISTJ','ISFJ','ESTJ','ESFJ','ISTP','ISFP','ESTP','ESFP'
+    );
+  end if;
+
+  if not exists (select 1 from pg_type where typname = 'message_role') then
+    create type message_role as enum ('user','assistant','system','tool');
+  end if;
+
+  if not exists (select 1 from pg_type where typname = 'session_status') then
+    create type session_status as enum ('active','archived');
+  end if;
+
+  if not exists (select 1 from pg_type where typname = 'visibility') then
+    create type visibility as enum ('private','public');
+  end if;
+
+  if not exists (select 1 from pg_type where typname = 'role_type') then
+    create type role_type as enum ('user','admin');
+  end if;
+
+  if not exists (select 1 from pg_type where typname = 'mbti_axis') then
+    create type mbti_axis as enum ('EI','SN','TF','JP');
+  end if;
+end $$;
+```
+
+#### 2) ユーティリティ関数
+```sql
+create or replace function set_updated_at()
+returns trigger language plpgsql as $$
+begin
+  new.updated_at := now();
+  return new;
+end $$;
+```
+
+#### 3) プロフィール / 役割テーブル
+```sql
+create table if not exists profiles (
+  id            uuid primary key references auth.users(id) on delete cascade,
+  handle        citext unique,
+  display_name  text,
+  avatar_url    text,
+  mbti_type     mbti_code,
+  bio           text,
+  preferences   jsonb not null default '{}',
+  is_public     boolean not null default false,
+  last_seen_at  timestamptz,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+drop trigger if exists trg_profiles_updated_at on profiles;
+create trigger trg_profiles_updated_at
+before update on profiles
+for each row execute function set_updated_at();
+
+create table if not exists user_roles (
+  user_id   uuid not null references auth.users(id) on delete cascade,
+  role      role_type not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, role)
 );
 ```
 
-#### 2. セッション・メッセージテーブル
+#### 4) 管理者判定関数（SECURITY DEFINER）
 ```sql
--- sessions テーブル
-CREATE TABLE public.sessions (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  persona_id UUID REFERENCES public.bot_personas(id),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+drop function if exists is_admin();
+create or replace function is_admin()
+returns boolean
+security definer
+set search_path = public
+stable
+language sql
+as $$
+  select exists (
+    select 1 from user_roles
+    where user_id = auth.uid() and role = 'admin'
+  );
+$$;
+revoke all on function is_admin() from public;
+grant execute on function is_admin() to authenticated;
+-- 必要なら anon にも: grant execute on function is_admin() to anon;
+```
 
--- messages テーブル
-CREATE TABLE public.messages (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  session_id UUID REFERENCES public.sessions(id) ON DELETE CASCADE,
-  role TEXT CHECK (role IN ('user', 'assistant', 'system')),
-  content TEXT NOT NULL,
-  model TEXT,
-  tokens_in INTEGER,
-  tokens_out INTEGER,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+#### 5) ボット・ペルソナ
+```sql
+create table if not exists bot_personas (
+  id            uuid primary key default gen_random_uuid(),
+  owner_id      uuid references auth.users(id) on delete set null, -- null=プリセット
+  name          text not null,
+  description   text,
+  mbti_type     mbti_code,
+  warmth        smallint not null default 50 check (warmth between 0 and 100),
+  formality     smallint not null default 50 check (formality between 0 and 100),
+  brevity       smallint not null default 50 check (brevity between 0 and 100),
+  humor         smallint not null default 50 check (humor between 0 and 100),
+  empathy       smallint not null default 50 check (empathy between 0 and 100),
+  assertiveness smallint not null default 50 check (assertiveness between 0 and 100),
+  creativity    smallint not null default 50 check (creativity between 0 and 100),
+  rigor         smallint not null default 50 check (rigor between 0 and 100),
+  emoji_usage   smallint not null default 25 check (emoji_usage between 0 and 100),
+  steps         smallint not null default 1  check (steps between 1 and 20),
+  visibility    visibility not null default 'private',
+  system_prompt_template text,
+  version       integer not null default 1,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+create index if not exists idx_bot_personas_owner on bot_personas(owner_id);
+create index if not exists idx_bot_personas_visibility on bot_personas(visibility);
+drop trigger if exists trg_bot_personas_updated_at on bot_personas;
+create trigger trg_bot_personas_updated_at
+before update on bot_personas
+for each row execute function set_updated_at();
+```
+
+#### 6) セッション / メッセージ / フィードバック
+```sql
+create table if not exists sessions (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid not null references auth.users(id) on delete cascade,
+  persona_id     uuid references bot_personas(id) on delete set null,
+  title          text,
+  model          text,
+  temperature    numeric(3,2) not null default 0.70 check (temperature between 0 and 2),
+  status         session_status not null default 'active',
+  message_count  integer not null default 0,
+  last_message_at timestamptz,
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now(),
+  deleted_at     timestamptz
+);
+create index if not exists idx_sessions_user_created on sessions(user_id, created_at desc);
+create index if not exists idx_sessions_persona on sessions(persona_id);
+drop trigger if exists trg_sessions_updated_at on sessions;
+create trigger trg_sessions_updated_at
+before update on sessions
+for each row execute function set_updated_at();
+
+create table if not exists messages (
+  id                uuid primary key default gen_random_uuid(),
+  session_id        uuid not null references sessions(id) on delete cascade,
+  role              message_role not null,
+  content           text not null,
+  content_json      jsonb,
+  model             text,
+  tokens_prompt     integer,
+  tokens_completion integer,
+  error             text,
+  created_at        timestamptz not null default now()
+);
+create index if not exists idx_messages_session_created on messages(session_id, created_at);
+create index if not exists idx_messages_session_id on messages(session_id, id);
+
+create or replace function bump_session_on_message()
+returns trigger language plpgsql as $$
+begin
+  update sessions
+     set message_count = message_count + 1,
+         last_message_at = now(),
+         updated_at = now()
+   where id = new.session_id;
+  return new;
+end $$;
+drop trigger if exists trg_messages_after_insert on messages;
+create trigger trg_messages_after_insert
+after insert on messages
+for each row execute function bump_session_on_message();
+
+create table if not exists message_feedback (
+  id         uuid primary key default gen_random_uuid(),
+  message_id uuid not null references messages(id) on delete cascade,
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  rating     smallint not null check (rating in (-1, 1)),
+  reason     text,
+  created_at timestamptz not null default now(),
+  unique (message_id, user_id)
 );
 ```
 
-#### 3. ボット・性格パラメータテーブル
+#### 7) MBTI（質問・受検・回答・相性）
 ```sql
--- bot_personas テーブル
-CREATE TABLE public.bot_personas (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  owner_id UUID REFERENCES public.profiles(id), -- NULLの場合はプリセット
-  name TEXT NOT NULL,
-  mbti TEXT,
-  params JSONB NOT NULL DEFAULT '{}',
-  system_template TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+create table if not exists mbti_questions (
+  id         uuid primary key default gen_random_uuid(),
+  code       text unique,
+  text       text not null,
+  axis       mbti_axis not null,
+  direction  smallint not null default 1 check (direction in (-1, 1)),
+  "order"    integer not null,
+  locale     text not null default 'ja',
+  is_active  boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
+drop trigger if exists trg_mbti_questions_updated_at on mbti_questions;
+create trigger trg_mbti_questions_updated_at
+before update on mbti_questions
+for each row execute function set_updated_at();
 
--- 性格パラメータのJSONBスキーマ例
--- {
---   "warmth": 0.7,
---   "formality": 0.2,
---   "concision": 0.5,
---   "humor": 0.6,
---   "empathy": 0.8,
---   "proactivity": 0.4,
---   "creativity": 0.7,
---   "analytical": 0.6,
---   "emoji_usage": "sparingly",
---   "structure": "bullet"
--- }
+create table if not exists mbti_tests (
+  id              uuid primary key default gen_random_uuid(),
+  user_id         uuid not null references auth.users(id) on delete cascade,
+  started_at      timestamptz not null default now(),
+  completed_at    timestamptz,
+  status          text not null default 'in_progress',
+  determined_type mbti_code,
+  scores          jsonb,
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now()
+);
+create index if not exists idx_mbti_tests_user_created on mbti_tests(user_id, created_at desc);
+drop trigger if exists trg_mbti_tests_updated_at on mbti_tests;
+create trigger trg_mbti_tests_updated_at
+before update on mbti_tests
+for each row execute function set_updated_at();
+
+create table if not exists mbti_answers (
+  id           uuid primary key default gen_random_uuid(),
+  test_id      uuid not null references mbti_tests(id) on delete cascade,
+  question_id  uuid not null references mbti_questions(id) on delete restrict,
+  score        smallint not null check (score between 1 and 7),
+  created_at   timestamptz not null default now(),
+  unique (test_id, question_id)
+);
+create index if not exists idx_mbti_answers_test on mbti_answers(test_id);
+
+create table if not exists mbti_compatibilities (
+  type_a mbti_code not null,
+  type_b mbti_code not null,
+  score  smallint not null check (score between 0 and 100),
+  primary key (type_a, type_b)
+);
 ```
 
-#### 4. MBTI診断テーブル
+#### 8) SSE/ストリーミング監査ログ
 ```sql
--- mbti_questions テーブル
-CREATE TABLE public.mbti_questions (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  axis TEXT CHECK (axis IN ('EI', 'SN', 'TF', 'JP')),
-  prompt_ja TEXT NOT NULL,
-  prompt_en TEXT NOT NULL,
-  polarity INTEGER CHECK (polarity IN (-1, 1)),
-  order_index INTEGER NOT NULL
+create table if not exists sse_events (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  session_id  uuid references sessions(id) on delete set null,
+  event_type  text not null check (event_type in ('start','end','interrupt','error')),
+  detail      text,
+  request_id  text,
+  created_at  timestamptz not null default now()
 );
+create index if not exists idx_sse_events_user_created on sse_events(user_id, created_at desc);
+```
 
--- mbti_answers テーブル
-CREATE TABLE public.mbti_answers (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
-  question_id UUID REFERENCES public.mbti_questions(id),
-  score INTEGER CHECK (score BETWEEN -2 AND 2),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
+#### 9) RPC（クライアント用安全投稿）
+```sql
+create or replace function post_user_message(p_session_id uuid, p_content text)
+returns uuid
+language plpgsql
+as $$
+declare
+  new_id uuid;
+begin
+  insert into messages (id, session_id, role, content)
+  values (gen_random_uuid(), p_session_id, 'user', p_content)
+  returning id into new_id;
+  return new_id;
+end $$;
+grant execute on function post_user_message(uuid, text) to authenticated;
 ```
 
 ### Row Level Security (RLS) ポリシー
 
+#### 10) RLS 有効化
 ```sql
--- プロフィール
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+alter table profiles enable row level security;
+alter table user_roles enable row level security;
+alter table bot_personas enable row level security;
+alter table sessions enable row level security;
+alter table messages enable row level security;
+alter table message_feedback enable row level security;
+alter table mbti_questions enable row level security;
+alter table mbti_tests enable row level security;
+alter table mbti_answers enable row level security;
+alter table mbti_compatibilities enable row level security;
+alter table sse_events enable row level security;
+```
 
-CREATE POLICY "Users can view own profile" ON public.profiles
-  FOR SELECT USING (auth.uid() = id);
+#### 11) RLS ポリシー
+```sql
+-- profiles
+drop policy if exists "profiles_select_owner_or_public" on profiles;
+create policy "profiles_select_owner_or_public"
+on profiles
+for select
+to authenticated
+using ( id = auth.uid() or is_public );
 
-CREATE POLICY "Users can insert own profile" ON public.profiles
-  FOR INSERT WITH CHECK (auth.uid() = id);
+drop policy if exists "profiles_update_owner" on profiles;
+create policy "profiles_update_owner"
+on profiles
+for update
+to authenticated
+using ( id = auth.uid() )
+with check ( id = auth.uid() );
 
-CREATE POLICY "Users can update own profile" ON public.profiles
-  FOR UPDATE USING (auth.uid() = id);
+drop policy if exists "profiles_insert_self" on profiles;
+create policy "profiles_insert_self"
+on profiles
+for insert
+to authenticated
+with check ( id = auth.uid() );
 
--- セッション
-ALTER TABLE public.sessions ENABLE ROW LEVEL SECURITY;
+drop policy if exists "profiles_admin_select_all" on profiles;
+create policy "profiles_admin_select_all"
+on profiles
+for select
+to authenticated
+using ( is_admin() );
 
-CREATE POLICY "Users can manage own sessions" ON public.sessions
-  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+-- user_roles（通常は不可視、管理者のみ読取）
+drop policy if exists "user_roles_admin_read" on user_roles;
+create policy "user_roles_admin_read"
+on user_roles
+for select
+to authenticated
+using ( is_admin() );
 
--- メッセージ
-ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
+-- bot_personas
+drop policy if exists "bot_personas_select_public_or_owner" on bot_personas;
+create policy "bot_personas_select_public_or_owner"
+on bot_personas
+for select
+to authenticated
+using ( visibility = 'public' or owner_id = auth.uid() );
 
-CREATE POLICY "Users can manage own messages" ON public.messages
-  FOR ALL USING (
-    auth.uid() IN (
-      SELECT user_id FROM public.sessions WHERE id = messages.session_id
-    )
-  ) WITH CHECK (
-    auth.uid() IN (
-      SELECT user_id FROM public.sessions WHERE id = messages.session_id
-    )
-  );
+drop policy if exists "bot_personas_insert_owner" on bot_personas;
+create policy "bot_personas_insert_owner"
+on bot_personas
+for insert
+to authenticated
+with check ( owner_id = auth.uid() );
 
--- ボットペルソナ
-ALTER TABLE public.bot_personas ENABLE ROW LEVEL SECURITY;
+drop policy if exists "bot_personas_update_owner" on bot_personas;
+create policy "bot_personas_update_owner"
+on bot_personas
+for update
+to authenticated
+using ( owner_id = auth.uid() )
+with check ( owner_id = auth.uid() );
 
-CREATE POLICY "Users can view all personas" ON public.bot_personas
-  FOR SELECT USING (true); -- プリセット含む全て閲覧可能
+drop policy if exists "bot_personas_delete_owner" on bot_personas;
+create policy "bot_personas_delete_owner"
+on bot_personas
+for delete
+to authenticated
+using ( owner_id = auth.uid() );
 
-CREATE POLICY "Users can manage own personas" ON public.bot_personas
-  FOR INSERT WITH CHECK (auth.uid() = owner_id);
+drop policy if exists "bot_personas_admin_all" on bot_personas;
+create policy "bot_personas_admin_all"
+on bot_personas
+for all
+to authenticated
+using ( is_admin() )
+with check ( is_admin() );
 
-CREATE POLICY "Users can update own personas" ON public.bot_personas
-  FOR UPDATE USING (auth.uid() = owner_id);
+-- sessions
+drop policy if exists "sessions_select_owner" on sessions;
+create policy "sessions_select_owner"
+on sessions
+for select
+to authenticated
+using ( user_id = auth.uid() );
 
-CREATE POLICY "Users can delete own personas" ON public.bot_personas
-  FOR DELETE USING (auth.uid() = owner_id);
+drop policy if exists "sessions_insert_owner" on sessions;
+create policy "sessions_insert_owner"
+on sessions
+for insert
+to authenticated
+with check ( user_id = auth.uid() );
 
--- MBTI回答
-ALTER TABLE public.mbti_answers ENABLE ROW LEVEL SECURITY;
+drop policy if exists "sessions_update_owner" on sessions;
+create policy "sessions_update_owner"
+on sessions
+for update
+to authenticated
+using ( user_id = auth.uid() )
+with check ( user_id = auth.uid() );
 
-CREATE POLICY "Users can manage own answers" ON public.mbti_answers
-  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+drop policy if exists "sessions_delete_owner" on sessions;
+create policy "sessions_delete_owner"
+on sessions
+for delete
+to authenticated
+using ( user_id = auth.uid() );
+
+-- messages
+drop policy if exists "messages_select_session_owner" on messages;
+create policy "messages_select_session_owner"
+on messages
+for select
+to authenticated
+using (
+  exists (
+    select 1 from sessions s
+    where s.id = session_id and s.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "messages_insert_user_role_only" on messages;
+create policy "messages_insert_user_role_only"
+on messages
+for insert
+to authenticated
+with check (
+  role = 'user' and
+  exists (
+    select 1 from sessions s
+    where s.id = session_id and s.user_id = auth.uid()
+  )
+);
+-- assistant/system の書込は server 側（service_role）専用
+
+-- message_feedback
+drop policy if exists "message_feedback_rw_owner" on message_feedback;
+create policy "message_feedback_rw_owner"
+on message_feedback
+for select
+to authenticated
+using ( user_id = auth.uid() );
+
+drop policy if exists "message_feedback_insert_owner" on message_feedback;
+create policy "message_feedback_insert_owner"
+on message_feedback
+for insert
+to authenticated
+with check ( user_id = auth.uid() );
+
+-- mbti_questions / mbti_compatibilities
+drop policy if exists "mbti_questions_select_all" on mbti_questions;
+create policy "mbti_questions_select_all"
+on mbti_questions
+for select
+to authenticated
+using ( true );
+
+drop policy if exists "mbti_questions_admin_write" on mbti_questions;
+create policy "mbti_questions_admin_write"
+on mbti_questions
+for all
+to authenticated
+using ( is_admin() )
+with check ( is_admin() );
+
+drop policy if exists "mbti_compat_select_all" on mbti_compatibilities;
+create policy "mbti_compat_select_all"
+on mbti_compatibilities
+for select
+to authenticated
+using ( true );
+
+drop policy if exists "mbti_compat_admin_write" on mbti_compatibilities;
+create policy "mbti_compat_admin_write"
+on mbti_compatibilities
+for all
+to authenticated
+using ( is_admin() )
+with check ( is_admin() );
+
+-- mbti_tests / mbti_answers
+drop policy if exists "mbti_tests_rw_owner" on mbti_tests;
+create policy "mbti_tests_rw_owner"
+on mbti_tests
+for select
+to authenticated
+using ( user_id = auth.uid() );
+
+drop policy if exists "mbti_tests_insert_owner" on mbti_tests;
+create policy "mbti_tests_insert_owner"
+on mbti_tests
+for insert
+to authenticated
+with check ( user_id = auth.uid() );
+
+drop policy if exists "mbti_tests_update_owner" on mbti_tests;
+create policy "mbti_tests_update_owner"
+on mbti_tests
+for update
+to authenticated
+using ( user_id = auth.uid() )
+with check ( user_id = auth.uid() );
+
+drop policy if exists "mbti_answers_rw_owner" on mbti_answers;
+create policy "mbti_answers_rw_owner"
+on mbti_answers
+for select
+to authenticated
+using (
+  exists (
+    select 1 from mbti_tests t
+    where t.id = test_id and t.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "mbti_answers_insert_owner" on mbti_answers;
+create policy "mbti_answers_insert_owner"
+on mbti_answers
+for insert
+to authenticated
+with check (
+  exists (
+    select 1 from mbti_tests t
+    where t.id = test_id and t.user_id = auth.uid()
+  )
+);
+
+-- sse_events
+drop policy if exists "sse_events_select_owner" on sse_events;
+create policy "sse_events_select_owner"
+on sse_events
+for select
+to authenticated
+using ( user_id = auth.uid() );
+
+drop policy if exists "sse_events_insert_owner" on sse_events;
+create policy "sse_events_insert_owner"
+on sse_events
+for insert
+to authenticated
+with check ( user_id = auth.uid() );
+
+drop policy if exists "sse_events_admin_read_all" on sse_events;
+create policy "sse_events_admin_read_all"
+on sse_events
+for select
+to authenticated
+using ( is_admin() );
 ```
 
 ## エラーハンドリング
@@ -630,6 +1028,92 @@ const handleDatabaseError = async (error: any, operation: string) => {
 ## テスト戦略
 
 ### テスト構成
+
+#### テスト用ディレクトリ構成
+
+Next.js + Vitest を前提に、テストはすべてリポジトリ直下の `tests/` に隔離します。`src/` 配下にはテストファイルを置きません。`tests/` はソースツリーをミラーする階層で整理します。
+
+```
+chat-mvp/
+├── src/
+│   ├── app/
+│   │   └── api/
+│   │       └── chat/
+│   │           └── route.ts
+│   ├── components/
+│   │   └── chat/
+│   │       └── Chat.tsx
+│   └── lib/
+│       └── mbti/
+│           └── calculator.ts
+├── tests/
+│   ├── unit/
+│   │   ├── lib/
+│   │   │   └── mbti/
+│   │   │       └── calculator.test.ts        # src/lib/mbti/calculator.ts に対応
+│   │   └── components/
+│   │       └── chat/
+│   │           └── Chat.test.tsx             # src/components/chat/Chat.tsx に対応
+│   ├── integration/
+│   │   └── api/
+│   │       └── chat.route.test.ts            # API統合テスト
+│   ├── e2e/                                   # Playwright 等（任意）
+│   │   └── chat.e2e.spec.ts
+│   ├── mocks/
+│   │   ├── server.ts                          # MSW サーバ初期化
+│   │   └── handlers.ts                        # ハンドラー定義
+│   ├── fixtures/
+│   │   └── messages.json
+│   └── utils/
+│       └── test-utils.tsx                     # RTL ヘルパ
+├── vitest.setup.ts                            # グローバルセットアップ
+└── playwright.config.ts                       # E2E（使用時のみ）
+```
+
+- ソースツリーミラーの原則
+  - `src/<area>/<subdirs>/X.ts` ↔ `tests/unit/<area>/<subdirs>/X.test.ts`
+  - API Route の統合テストは `tests/integration/api/**`
+  - UI のユニット/コンポーネントテストは `tests/unit/components/**`（jsdom）
+  - スナップショットは各テスト同階層の `__snapshots__/`
+  - 禁止: `src/**` に `*.test.*` / `*.spec.*` を作成しない
+
+Vitest 設定例（隔離構成・環境の出し分け・パス解決）:
+
+```ts
+// vitest.config.ts
+import { defineConfig } from 'vitest/config';
+import tsconfigPaths from 'vite-tsconfig-paths';
+
+export default defineConfig({
+  plugins: [tsconfigPaths()],
+  test: {
+    include: ['tests/**/*.{test,spec}.{ts,tsx}'],
+    environment: 'jsdom',
+    environmentMatchGlobs: [
+      ['tests/integration/**', 'node'],
+      ['tests/e2e/**', 'node'],
+    ],
+    setupFiles: ['./vitest.setup.ts'],
+    globals: true,
+  },
+});
+```
+
+グローバルセットアップ例（MSW + RTL）:
+
+```ts
+// vitest.setup.ts
+import '@testing-library/jest-dom';
+import { server } from './tests/mocks/server';
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+```
+
+API Route のテスト方針:
+- ビジネスロジックは `src/lib/**` に分離しユニットテスト優先
+- Route Handler 直接の統合テストは `tests/integration/api/**` に配置
 
 #### 1. ユニットテスト
 ```typescript
