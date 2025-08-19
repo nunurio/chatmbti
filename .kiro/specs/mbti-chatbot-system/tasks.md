@@ -85,12 +85,16 @@
   - _要件: 2.7, 6.2_
 
 - [ ] 7.2 ストリーミング機能強化
-  - 既存/api/chat/route.tsの拡張（personaId, sessionId対応）
-  - LangGraphとプロンプトエンジンの統合
-  - 性格パラメータ反映のシステムプロンプト動的生成
-  - GPT-5 モデル/設定の適用とストリーミング最適化
-  - SSE監査ログ（`sse_events`）への start/end/interrupt/error 記録（request_id付与）
-  - assistant/system/tool メッセージ保存は server（service_role）側のみで実行
+  - [x] Node ランタイム指定（`export const runtime = "nodejs"`）
+  - [x] SSE 基本実装（`token`/`error`/`done` の最小配信。`Content-Type`, `Cache-Control`, `Connection`, `X-Accel-Buffering` ヘッダ）
+  - [x] LangGraph ストリーミング統合（`app.streamEvents({ version: "v2" })`）
+  - [ ] `export const dynamic = "force-dynamic"` を追加（API応答のキャッシュ回避）
+  - [ ] 既存 `/api/chat/route.ts` の拡張（`personaId`, `sessionId` 対応）
+  - [ ] 型付き SSE の拡充（`event: token|progress|usage|error|done`、`retry`/`id`/`Last-Event-ID` 再開、15s ハートビート）
+  - [ ] 進捗/使用量イベントの送出（`progress`/`usage`）
+  - [ ] 性格パラメータ反映のシステムプロンプト動的生成（Persona/MBTI からの合成）
+  - [ ] SSE監査ログ（`sse_events`）への `start/end/interrupt/error` 記録（`request_id` 付与）
+  - [ ] assistant/system/tool メッセージ保存は server（service_role）側のみで実行
   - _要件: 2.1, 2.2, 2.3, 2.4, 8.3, 8.5, 8.6_
 
 - [x] 7.3 チャット操作機能実装
@@ -110,11 +114,14 @@
 - [ ] 9.1 エラーハンドリング強化
   - 認証エラー・ストリーミングエラー・データベースエラーの分類処理
   - 多言語エラーメッセージ実装
+  - Problem Details (RFC 9457) 形式のエラー応答統一（Route Handler 全般。SSE はイベントで通知）
+  - Zod による入出力スキーマ検証の導入（/api/** 全体）
   - エラー復旧処理とリトライ機能実装
   - _要件: 10.1, 10.2, 10.3, 10.6, 10.7_
 
 - [ ] 9.2 監視とログ実装
   - SSE開始/終了/中断イベントのログ記録（`sse_events` へ保存）
+  - OpenTelemetry 計装（`instrumentation.js`）：`first_token_latency_ms` と `tokens_per_second` を記録
   - エラーメトリクス収集機能実装
   - パフォーマンス監視機能実装
   - _要件: 10.4, 8.1, 8.2_
@@ -161,6 +168,7 @@
   - セキュリティヘッダーの設定
   - assistant/system/tool 書込が service_role に限定されていることの確認
   - `is_admin()` の SECURITY DEFINER/権限の確認
+  - Edge Middleware レート制限の導入（`@upstash/ratelimit`。429 は Problem Details で返却）
   - _要件: 6.7, 8.7_
 
 - [ ] 12.2 パフォーマンス最適化

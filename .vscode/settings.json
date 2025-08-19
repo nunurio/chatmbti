@@ -1,22 +1,44 @@
 {
-    "workbench.colorCustomizations": {
-        "activityBar.activeBackground": "#e0dffb",
-        "activityBar.background": "#e0dffb",
-        "activityBar.foreground": "#15202b",
-        "activityBar.inactiveForeground": "#15202b99",
-        "activityBarBadge.background": "#ed7671",
-        "activityBarBadge.foreground": "#15202b",
-        "commandCenter.border": "#15202b99",
-        "sash.hoverBorder": "#e0dffb",
-        "statusBar.background": "#b5b2f5",
-        "statusBar.foreground": "#15202b",
-        "statusBarItem.hoverBackground": "#8a85ef",
-        "statusBarItem.remoteBackground": "#b5b2f5",
-        "statusBarItem.remoteForeground": "#15202b",
-        "titleBar.activeBackground": "#b5b2f5",
-        "titleBar.activeForeground": "#15202b",
-        "titleBar.inactiveBackground": "#b5b2f599",
-        "titleBar.inactiveForeground": "#15202b99"
-    },
-    "peacock.color": "#b5b2f5"
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno"
+  },
+  "deno.enablePaths": [
+    "supabase/functions"
+  ],
+  "deno.lint": true,
+  "deno.unstable": [
+    "bare-node-builtins",
+    "byonm",
+    "sloppy-imports",
+    "unsafe-proto",
+    "webgpu",
+    "broadcast-channel",
+    "worker-options",
+    "cron",
+    "kv",
+    "ffi",
+    "fs",
+    "http",
+    "net"
+  ],
+  "peacock.color": "#b5b2f5",
+  "workbench.colorCustomizations": {
+    "activityBar.activeBackground": "#e0dffb",
+    "activityBar.background": "#e0dffb",
+    "activityBar.foreground": "#15202b",
+    "activityBar.inactiveForeground": "#15202b99",
+    "activityBarBadge.background": "#ed7671",
+    "activityBarBadge.foreground": "#15202b",
+    "commandCenter.border": "#15202b99",
+    "sash.hoverBorder": "#e0dffb",
+    "statusBar.background": "#b5b2f5",
+    "statusBar.foreground": "#15202b",
+    "statusBarItem.hoverBackground": "#8a85ef",
+    "statusBarItem.remoteBackground": "#b5b2f5",
+    "statusBarItem.remoteForeground": "#15202b",
+    "titleBar.activeBackground": "#b5b2f5",
+    "titleBar.activeForeground": "#15202b",
+    "titleBar.inactiveBackground": "#b5b2f599",
+    "titleBar.inactiveForeground": "#15202b99"
+  }
 }

@@ -2,7 +2,17 @@
 
 ## 概要
 
-本設計書は、MBTI（Myers-Briggs Type Indicator）を活用したパーソナライズドチャットボットシステムのMVPの技術設計を定義します。現在のNext.js + LangGraphベースのチャットシステムを拡張し、Supabaseによるユーザー認証・データ永続化、MBTI診断機能、性格パラメータベースのボットカスタマイズ機能、ローカルデータ移行機能を追加します。GPT-5とLangGraphによるリアルタイムストリーミングで自然な対話体験を実現します。
+本設計書は、MBTI（Myers-Briggs Type Indicator）を活用したパーソナライズドチャットボットの MVP を、**Next.js 15（App Router, React 19）**、**Supabase（Auth + PostgreSQL + RLS）**、**LangGraph**、**OpenAI（Responses API）**、および **Vercel AI SDK v5** を基盤に構築するための技術設計を定義する。
+
+本改訂では、2025 年時点のベストプラクティスに準拠して以下を適用する：
+- **SSR 認証**：`@supabase/ssr` によるクッキー連携・トークン自動リフレッシュ（非対称 JWT/JWKS に対応）。
+- **SSE ストリーミング**：Route Handler（Node ランタイム）での **型付き SSE**（`event`/`id`/`retry` と 15 秒ハートビート）により安定配信と UI 即時性を最大化。
+- **API の堅牢化**：**RFC 9457 Problem Details** に準拠したエラー応答と **Zod** による入出力スキーマ検証。
+- **レート制限**：Edge Middleware での **`@upstash/ratelimit`** 実装。
+- **観測性**：**OpenTelemetry（`instrumentation.js`）** によるストリーム・トレースと指標収集。
+- **i18n**：`next-intl` による App Router ネイティブの多言語対応。
+
+**変更禁止範囲**（据え置き）：既存の **ディレクトリ構造**、**Supabase の DB 設計（スキーマ）**、および **RLS ポリシー**。
 
 ## アーキテクチャ
 
@@ -10,155 +20,167 @@
 
 ```mermaid
 graph TB
-    subgraph "Client Layer"
-        UI[Next.js 15 App Router]
-        Auth[Supabase Auth Client]
-        LocalStorage[Local Storage Migration]
-    end
-    
-    subgraph "API Layer"
-        ChatAPI["/api/chat - SSE Streaming"]
-        AuthAPI["/api/auth - Auth Management"]
-        PersonaAPI["/api/personas - Bot Management"]
-        MBTIAPI["/api/mbti - Diagnosis & Types"]
-        MigrationAPI["/api/migrate - Data Migration"]
-    end
-    
-    subgraph "AI Layer"
-        LangGraph[LangGraph State Machine]
-        OpenAI[OpenAI GPT-5]
-        PromptEngine[Dynamic Prompt Generation]
-    end
-    
-    subgraph "Data Layer"
-        SupabaseAuth[Supabase Auth]
-        SupabaseDB[Supabase PostgreSQL]
-        RLS[Row Level Security]
-    end
-    
-    UI --> ChatAPI
-    UI --> AuthAPI
-    UI --> PersonaAPI
-    UI --> MBTIAPI
-    UI --> MigrationAPI
-    Auth --> SupabaseAuth
-    
-    ChatAPI --> LangGraph
-    PersonaAPI --> SupabaseDB
-    MBTIAPI --> SupabaseDB
-    AuthAPI --> SupabaseAuth
-    MigrationAPI --> SupabaseDB
-    
-    LangGraph --> OpenAI
-    LangGraph --> PromptEngine
-    PromptEngine --> SupabaseDB
-    
-    SupabaseDB --> RLS
+  subgraph "Client (Next.js 15, React 19)"
+    UI[App Router (RSC)]
+    I18N[next-intl]
+    SSRAuth[@supabase/ssr (cookies)]
+  end
+
+  subgraph "Edge/Middleware"
+    RL[Rate Limit (@upstash/ratelimit)]
+    Sec[Security Headers (CSP/HSTS etc.)]
+  end
+
+  subgraph "API Layer (Route Handlers)"
+    ChatAPI["/api/chat (Node runtime, SSE)"]
+    AuthAPI["/api/auth"]
+    PersonaAPI["/api/personas"]
+    MBTIAPI["/api/mbti/*"]
+    MigrationAPI["/api/migrate"]
+  end
+
+  subgraph "AI Layer"
+    LangGraph[LangGraph Orchestrator]
+    AISDK[Vercel AI SDK v5]
+    OpenAI[OpenAI Responses API]
+    PromptEngine[Dynamic Prompt Templates]
+  end
+
+  subgraph "Data Layer"
+    SupabaseAuth[Supabase Auth (asymmetric JWT)]
+    SupabaseDB[Supabase PostgreSQL]
+    RLS[Row Level Security (unchanged)]
+    Cache[Upstash Redis (rate limit/cache)]
+  end
+
+  UI --> RL
+  RL --> UI
+  UI --> ChatAPI
+  UI --> AuthAPI
+  UI --> PersonaAPI
+  UI --> MBTIAPI
+  UI --> MigrationAPI
+
+  AuthAPI --> SupabaseAuth
+
+  ChatAPI --> LangGraph
+  LangGraph --> OpenAI
+  ChatAPI --> AISDK
+  PromptEngine --> SupabaseDB
+  PersonaAPI --> SupabaseDB
+  MBTIAPI --> SupabaseDB
+  MigrationAPI --> SupabaseDB
+  SupabaseDB --> RLS
+  RL --> ChatAPI
+  Cache --> RL
 ```
 
-### データフロー設計
+### データフロー設計（改訂）
 
-#### 1. ユーザー認証フロー
+#### 1. 認証（Magic Link + SSR）
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant UI as Next.js UI
-    participant SA as Supabase Auth
-    participant DB as Supabase DB
-    
-    U->>UI: メールアドレス入力
-    UI->>SA: Magic Link送信要求
-    SA->>U: Magic Link メール送信
-    U->>SA: Magic Link クリック
-    SA->>UI: 認証完了 + JWT
-    UI->>DB: プロフィール存在確認
-    alt プロフィール未作成
-        UI->>UI: MBTI設定画面表示
-    else プロフィール存在
-        UI->>UI: チャット画面表示
-    end
+  participant U as User
+  participant UI as Next.js UI (RSC)
+  participant MW as Edge Middleware (Rate Limit/CSP)
+  participant SA as Supabase Auth (@supabase/ssr)
+  participant DB as Supabase DB
+
+  U->>MW: /login へアクセス
+  MW-->>U: ヘッダ付与・許可（レート制限OK）
+  U->>UI: メール入力・送信
+  UI->>SA: signInWithOtp (Magic Link)
+  SA-->>U: Magic Link 送信
+  U->>SA: クリック（認証）
+  SA-->>UI: セッション（クッキーに保存）
+  UI->>DB: profiles 取得（RLS）
+  alt プロフィール未作成
+    UI->>UI: プロフィール/MBTI 設定ページへ
+  else 既存
+    UI->>UI: ダッシュボードへ
+  end
 ```
 
-#### 2. MBTI診断フロー
+#### 2. MBTI 診断
+- **スケール統一**：回答は **1..7**（DB と整合）。UI の 5 段階は `1..7` に線形マップ可能（例：`1,2,3,4,5 → 1,2,3,5,7` など UI 側で補間）。
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant UI as Next.js UI
-    participant API as MBTI API
-    participant DB as Supabase DB
-    
-    U->>UI: "MBTIが不明"選択
-    UI->>API: 診断開始要求
-    API->>DB: 診断設問取得
-    DB->>API: 24問の設問データ
-    API->>UI: 設問データ返却
-    
-    loop 24問の回答
-        U->>UI: 設問回答（1-5段階）
-        UI->>API: 回答送信
-        API->>DB: 回答保存
-    end
-    
-    API->>API: MBTI判定計算
-    API->>DB: 結果をプロフィールに保存
-    API->>UI: 判定結果返却
-    UI->>UI: 推奨ボット画面表示
+  participant U as User
+  participant UI as Next.js UI
+  participant API as MBTI API
+  participant DB as Supabase DB
+
+  U->>UI: 「MBTI 不明」を選択
+  UI->>API: GET /api/mbti/questions
+  API->>DB: 質問取得（mbti_questions）
+  DB-->>API: 質問(方向=direction, 軸=axis)
+  API-->>UI: 質問配列 (1..7スケール明示)
+
+  loop 設問回答
+    U->>UI: 1..7 で回答
+    UI->>API: POST /api/mbti/diagnosis（逐次保存可）
+    API->>DB: mbti_tests / mbti_answers に保存
+  end
+
+  API->>API: 集計（EI,SN,TF,JP）
+  API->>DB: profiles.mbti_type 更新（任意）
+  API-->>UI: 判定結果 + スコア
+  UI->>UI: 推奨ボット表示
 ```
 
-#### 3. チャットストリーミングフロー
+#### 3. チャット（SSE ストリーミング）
+- **SSE 仕様**：`Content-Type: text/event-stream`、`event`（`token|progress|usage|error|done`）、`id` 連番、`retry`、**15s ハートビート**（`:\n\n`）を送出。
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant UI as Next.js UI
-    participant API as Chat API
-    participant LG as LangGraph
-    participant PE as Prompt Engine
-    participant DB as Supabase DB
-    participant OpenAI as OpenAI API
-    
-    U->>UI: メッセージ入力
-    UI->>API: チャット要求（SSE）
-    API->>DB: セッション・履歴取得
-    API->>PE: 性格パラメータ取得
-    PE->>DB: ボット設定取得
-    PE->>API: システムプロンプト生成
-    API->>LG: ストリーミング開始
-    LG->>OpenAI: GPT-5呼び出し
-    
-    loop トークンストリーミング
-        OpenAI->>LG: トークンチャンク
-        LG->>API: ストリームイベント
-        API->>UI: SSEイベント送信
-        UI->>UI: リアルタイム表示更新
-    end
-    
-    API->>DB: メッセージ保存
-    API->>UI: 完了通知
+  participant U as User
+  participant UI as Next.js UI
+  participant API as /api/chat (Node)
+  participant LG as LangGraph
+  participant OAI as OpenAI Responses API
+  participant DB as Supabase DB
+
+  U->>UI: メッセージ送信
+  UI->>API: POST /api/chat (SSE)
+  API->>DB: セッション/履歴/ペルソナ取得（RLS）
+  API->>LG: グラフ実行（プロンプト組立）
+  LG->>OAI: ストリーミング呼び出し
+  par 配信ループ
+    OAI-->>LG: トークン
+    LG-->>API: トークン
+    API-->>UI: event: token, data:{text}
+  and 進捗/使用量
+    LG-->>API: ノード進捗
+    API-->>UI: event: progress
+    API-->>UI: event: usage（完了時）
+  end
+  API->>DB: メッセージ永続化
+  API-->>UI: event: done
 ```
 
-#### 4. ローカルデータ移行フロー
+#### 4. ローカルデータ移行
+- **分割インポート**（バッチ）と**冪等**を明示。大きなセッションはチャンク化。
 ```mermaid
 sequenceDiagram
-    participant U as User
-    participant UI as Next.js UI
-    participant LS as Local Storage
-    participant API as Migration API
-    participant DB as Supabase DB
-    
-    U->>UI: 初回ログイン
-    UI->>LS: 旧データ存在チェック
-    LS->>UI: 旧データ返却
-    alt 旧データ存在
-        UI->>UI: インポートモーダル表示
-        U->>UI: インポート承認
-        UI->>API: 旧データ送信
-        API->>DB: sessions/messagesに一括保存
-        API->>UI: インポート成功
-        UI->>LS: 旧データ削除
-        UI->>UI: チャット画面表示
-    else 旧データなし
-        UI->>UI: 通常のチャット画面表示
+  participant U as User
+  participant UI as Next.js UI
+  participant LS as Local Storage
+  participant API as /api/migrate
+  participant DB as Supabase DB
+
+  U->>UI: 初回ログイン
+  UI->>LS: 旧データ検出
+  alt 旧データあり
+    UI->>U: インポート確認
+    U->>UI: 承認
+    loop チャンク毎
+      UI->>API: POST /api/migrate (chunk)
+      API->>DB: sessions/messages 一括保存
     end
+    API-->>UI: 結果（件数）
+    UI->>LS: 旧データ削除
+  else なし
+    UI->>UI: 通常遷移
+  end
 ```
 
 ## コンポーネントとインターフェース
@@ -244,72 +266,69 @@ src/
 │       └── hooks.ts                  # 多言語フック
 ```
 
-### APIインターフェース設計
+（補足）
+- App Router/RSC 前提。**サーバコンポーネント優先**でデータ取得し、クライアント側は最小限に。
+- 認証は **`@supabase/ssr`** を使い、`AuthProvider` では **クッキー連携の再検証**（自動更新）を考慮。
+- SSE は `components/chat/Chat.tsx` で **EventSource** を使用し、**再接続（`retry`/`Last-Event-ID`）** と **ハートビート**に対応。
+- i18n は `next-intl` を採用し、`components/i18n/**` は `app/[locale]/layout.tsx` でラップ。
 
-#### 1. 認証API (`/api/auth`)
-```typescript
+### APIインターフェース設計（改訂）
+
+> すべての API は **Zod** によるバリデーションを実施。  
+> エラーは **RFC 9457 Problem Details**（`application/problem+json`）で返却。  
+> GET Route Handlers は **Next.js 15 で既定非キャッシュ**（必要に応じ明示的に静的化）。
+
+#### 1. 認証API (`/api/auth`) ※エントリーポイント最小化
+- **Magic Link/OAuth 自体は Supabase Auth を利用**。本 API はクライアント統合の**補助（メッセージ/状態）**のみに留める。
+
+```ts
 // POST /api/auth/signup
 interface SignupRequest {
   email: string;
   language?: 'ja' | 'en';
 }
+type Problem = {
+  type: string; title: string; status: number; detail?: string; instance?: string;
+};
 
-interface SignupResponse {
-  success: boolean;
-  message: string;
-}
-
-// POST /api/auth/profile
-interface ProfileRequest {
-  mbti?: string;
-  language?: 'ja' | 'en';
-}
-
-interface ProfileResponse {
-  id: string;
-  email: string;
-  mbti: string | null;
-  language: 'ja' | 'en';
-  created_at: string;
-  updated_at: string;
-}
+type SignupResponse =
+  | { success: true; message: string }   // 202 Accepted: Magic Link 送付
+  | Problem;                             // RFC 9457
 ```
 
 #### 2. MBTI診断API (`/api/mbti`)
-```typescript
+- **スコアは DB と同一の 1..7**。方向（`direction` = -1|1）を設問に含め、集計で符号付与。
+
+```ts
 // GET /api/mbti/questions
 interface Question {
   id: string;
   axis: 'EI' | 'SN' | 'TF' | 'JP';
   prompt: string;
-  polarity: 1 | -1;
+  direction: 1 | -1;    // ← 用語を "direction" に統一
+  scale: { min: 1; max: 7 };
 }
-
-interface QuestionsResponse {
-  questions: Question[];
-}
+interface QuestionsResponse { questions: Question[]; }
 
 // POST /api/mbti/diagnosis
 interface DiagnosisRequest {
+  test_id?: string; // 省略時は新規作成し応答で返す
   answers: Array<{
     question_id: string;
-    score: -2 | -1 | 0 | 1 | 2;
+    score: 1 | 2 | 3 | 4 | 5 | 6 | 7; // DB と整合
   }>;
+  finalize?: boolean; // true なら集計・保存まで行い結果返却
 }
-
 interface DiagnosisResponse {
-  mbti_type: string;
-  scores: {
-    EI: number;
-    SN: number;
-    TF: number;
-    JP: number;
-  };
+  test_id: string;
+  mbti_type?: string; // finalize=true のとき
+  scores?: { EI: number; SN: number; TF: number; JP: number };
 }
 ```
 
-#### 3. ボット管理API (`/api/personas`)
-```typescript
+#### 3. ボット管理API (`/api/personas`) ※インターフェースのみ再掲
+
+```ts
 // GET /api/personas
 interface PersonaResponse {
   id: string;
@@ -339,28 +358,49 @@ interface RecommendationResponse {
 }
 ```
 
-#### 4. 拡張チャットAPI (`/api/chat`)
-```typescript
-// 既存のチャットAPIを拡張
+#### 4. 拡張チャットAPI (`/api/chat`) — **型付き SSE & 再接続対応**
+
+```ts
+// POST /api/chat (SSE)
 interface ChatRequest {
   messages: Message[];
-  systemPrompt?: string;
-  personaId?: string;           // 新規追加
-  sessionId?: string;           // 新規追加
-  overrideParams?: Partial<PersonalityParameters>; // 新規追加
+  personaId?: string;
+  sessionId?: string;
+  overrideParams?: Partial<PersonalityParameters>;
+  // クライアント識別子（レート制限キー最適化）
+  clientId?: string;
 }
 
-// SSEイベント型も拡張
-type SSEEvent = 
-  | { type: "token", text: string }
-  | { type: "error", message: string }
-  | { type: "done" }
-  | { type: "progress", node: string }     // 新規追加
-  | { type: "usage", tokens_out: number }  // 新規追加
+type SSEEvent =
+  | { type: "token"; id: number; text: string }
+  | { type: "progress"; node: string }
+  | { type: "usage"; tokens_out: number; tokens_in?: number; model?: string }
+  | { type: "error"; message: string; code?: string } // 可能なら RFC9457 と同等のサマリ
+  | { type: "done" };
+```
+
+**SSE 送出要件**
+- `Content-Type: text/event-stream`, `Cache-Control: no-cache, no-transform`, `Connection: keep-alive`
+- **15 秒毎にハートビート**（`:\n\n`）を送信
+- `retry: 5000` と **`id` 連番**を送出し、**Last-Event-ID 再開**に対応
+- **例（サーバ送出）**：
+```
+retry: 5000
+id: 1
+event: token
+data: {"type":"token","id":1,"text":"こん"}
+
+id: 2
+event: token
+data: {"type":"token","id":2,"text":"にちは"}
+
+: keepalive
 ```
 
 #### 5. データ移行API (`/api/migrate`)
-```typescript
+- **大規模データはチャンク分割**、サーバ側で**冪等**（重複キーは upsert/無視）を推奨。
+
+```ts
 // POST /api/migrate
 interface MigrationRequest {
   sessions: Array<{
@@ -373,8 +413,8 @@ interface MigrationRequest {
     }>;
     created_at: string;
   }>;
+  chunk?: { index: number; total: number }; // 任意
 }
-
 interface MigrationResponse {
   success: boolean;
   imported_sessions: number;
@@ -942,400 +982,53 @@ to authenticated
 using ( is_admin() );
 ```
 
-## エラーハンドリング
+## セキュリティ設計（新規）
 
-### エラー分類と対応戦略
+- **認証**
+  - **@supabase/ssr** を採用し、**サーバ/クライアントで統一**された Supabase クライアントを利用。セッションは **HttpOnly/Secure/SameSite** のクッキーで管理。
+  - Supabase の **非対称 JWT**（JWKS）移行に対応。Edge/Route Handler での検証は **`getUser`（サーバクライアント）**を通し RLS に委譲（自前の署名検証は不要/最小化）。
+- **ヘッダ**
+  - `Content-Security-Policy`（script-src 'self' 'strict-dynamic'; object-src 'none'; base-uri 'self'; frame-ancestors 'none' ...）
+  - `Strict-Transport-Security`, `X-Frame-Options`（=DENY）, `Cross-Origin-Opener-Policy`, `Cross-Origin-Embedder-Policy`, `Referrer-Policy` 等
+- **レート制限**
+  - **Edge Middleware + @upstash/ratelimit** で IP/ユーザ単位にしきい値（短周期/長周期の二段階）。429 返却は Problem Details で。
+- **権限境界**
+  - **service_role** キーは **サーバ専用**（Route Handler/Edge Functions のみ）。クライアントへ露出禁止。
+  - `SECURITY DEFINER` RPC は用途限定・監査ログ（`sse_events` に request_id を結合）。
+- **依存の隔離**
+  - Chat API は Node ランタイム（LangGraph 依存）、Edge は Middleware のみ（軽量・高頻度）。
 
-#### 1. 認証エラー
-```typescript
-enum AuthError {
-  INVALID_EMAIL = 'INVALID_EMAIL',
-  MAGIC_LINK_EXPIRED = 'MAGIC_LINK_EXPIRED',
-  UNAUTHORIZED = 'UNAUTHORIZED',
-  PROFILE_NOT_FOUND = 'PROFILE_NOT_FOUND'
-}
+## エラーハンドリング（改訂）
 
-// エラーハンドリング例
-const handleAuthError = (error: AuthError, language: 'ja' | 'en') => {
-  const messages = {
-    ja: {
-      [AuthError.INVALID_EMAIL]: 'メールアドレスが無効です',
-      [AuthError.MAGIC_LINK_EXPIRED]: 'マジックリンクの有効期限が切れています',
-      [AuthError.UNAUTHORIZED]: '認証が必要です',
-      [AuthError.PROFILE_NOT_FOUND]: 'プロフィールが見つかりません'
-    },
-    en: {
-      [AuthError.INVALID_EMAIL]: 'Invalid email address',
-      [AuthError.MAGIC_LINK_EXPIRED]: 'Magic link has expired',
-      [AuthError.UNAUTHORIZED]: 'Authentication required',
-      [AuthError.PROFILE_NOT_FOUND]: 'Profile not found'
-    }
-  };
-  
-  return messages[language][error];
-};
-```
+- **入力検証**：すべての Route Handler で **Zod** による `safeParse`。失敗時は **400** と **Problem Details (RFC 9457)** を返却。
+- **統一形式**：`application/problem+json`、`{ type, title, status, detail, instance }`。再試行可能性などは `type` の URI で意味付け。
+- **SSE**：致命的エラーは `event: error` を送出しつつ、**HTTP レスポンスも 200** で完走（SSE プロトコル上の慣例）。クライアントは `type === 'error'` を UI へ反映し、再接続の可否を判断。
+- **再試行**：SSE で `retry`（ms）を明示。クライアントは **`Last-Event-ID`** を送出し再開。
+- **ログ/監査**：`sse_events` に `event_type`、`detail`、`request_id` を保存。Problem も合わせて記録。
 
-#### 2. ストリーミングエラー
-```typescript
-// ストリーミング中断時の復旧処理
-class StreamingErrorHandler {
-  private retryCount = 0;
-  private maxRetries = 3;
-  
-  async handleStreamError(error: Error, sessionId: string): Promise<void> {
-    if (this.retryCount < this.maxRetries) {
-      this.retryCount++;
-      // 指数バックオフで再試行
-      await new Promise(resolve => 
-        setTimeout(resolve, Math.pow(2, this.retryCount) * 1000)
-      );
-      return this.retryStream(sessionId);
-    }
-    
-    // 最大試行回数に達した場合はエラー保存
-    await this.saveErrorMessage(sessionId, error.message);
-  }
-  
-  private async saveErrorMessage(sessionId: string, errorMessage: string): Promise<void> {
-    // エラーメッセージをデータベースに保存
-    // ユーザーには適切なエラー通知を表示
-  }
-}
-```
+## テスト戦略（改訂）
 
-#### 3. データベースエラー
-```typescript
-// RLSポリシー違反やネットワークエラーの処理
-const handleDatabaseError = async (error: any, operation: string) => {
-  if (error.code === 'PGRST116') {
-    // RLS違反 - 認証状態を確認
-    await refreshAuth();
-    throw new Error('認証が必要です');
-  }
-  
-  if (error.message.includes('network')) {
-    // ネットワークエラー - オフライン対応
-    return handleOfflineMode(operation);
-  }
-  
-  // その他のエラーはログに記録
-  console.error(`Database error in ${operation}:`, error);
-  throw new Error('データベースエラーが発生しました');
-};
-```
+- **ユニット**：ビジネスロジックは `src/lib/**` を最優先で単体検証。Zod スキーマは **スナップショット**で後方互換性チェック。
+- **統合**：Route Handler は **node 環境**でフェッチベースに検証。SSE は `eventsource-parser`（あるいはモック）でストリーム確認。
+- **E2E**：Playwright で **EventSource** の受信を検証（トークン分割、ハートビート受信、`done` 受信、切断後の再接続）。
+- **観測性テスト**：OpenTelemetry のエクスポート有無（本番は OTLP、テストは in-memory）を切替。ストリーム span に `first_token_latency_ms` `tps` を付与ししきい値検証。
 
-## テスト戦略
+## システム性能要件（改訂）
 
-### テスト構成
+### 目標
+- 初回トークン < **700ms**
+- トークンレート > **25 tok/s**
 
-#### テスト用ディレクトリ構成
-
-Next.js + Vitest を前提に、テストはすべてリポジトリ直下の `tests/` に隔離します。`src/` 配下にはテストファイルを置きません。`tests/` はソースツリーをミラーする階層で整理します。
-
-```
-chat-mvp/
-├── src/
-│   ├── app/
-│   │   └── api/
-│   │       └── chat/
-│   │           └── route.ts
-│   ├── components/
-│   │   └── chat/
-│   │       └── Chat.tsx
-│   └── lib/
-│       └── mbti/
-│           └── calculator.ts
-├── tests/
-│   ├── unit/
-│   │   ├── lib/
-│   │   │   └── mbti/
-│   │   │       └── calculator.test.ts        # src/lib/mbti/calculator.ts に対応
-│   │   └── components/
-│   │       └── chat/
-│   │           └── Chat.test.tsx             # src/components/chat/Chat.tsx に対応
-│   ├── integration/
-│   │   └── api/
-│   │       └── chat.route.test.ts            # API統合テスト
-│   ├── e2e/                                   # Playwright 等（任意）
-│   │   └── chat.e2e.spec.ts
-│   ├── mocks/
-│   │   ├── server.ts                          # MSW サーバ初期化
-│   │   └── handlers.ts                        # ハンドラー定義
-│   ├── fixtures/
-│   │   └── messages.json
-│   └── utils/
-│       └── test-utils.tsx                     # RTL ヘルパ
-├── vitest.setup.ts                            # グローバルセットアップ
-└── playwright.config.ts                       # E2E（使用時のみ）
-```
-
-- ソースツリーミラーの原則
-  - `src/<area>/<subdirs>/X.ts` ↔ `tests/unit/<area>/<subdirs>/X.test.ts`
-  - API Route の統合テストは `tests/integration/api/**`
-  - UI のユニット/コンポーネントテストは `tests/unit/components/**`（jsdom）
-  - スナップショットは各テスト同階層の `__snapshots__/`
-  - 禁止: `src/**` に `*.test.*` / `*.spec.*` を作成しない
-
-Vitest 設定例（隔離構成・環境の出し分け・パス解決）:
-
-```ts
-// vitest.config.ts
-import { defineConfig } from 'vitest/config';
-import tsconfigPaths from 'vite-tsconfig-paths';
-
-export default defineConfig({
-  plugins: [tsconfigPaths()],
-  test: {
-    include: ['tests/**/*.{test,spec}.{ts,tsx}'],
-    environment: 'jsdom',
-    environmentMatchGlobs: [
-      ['tests/integration/**', 'node'],
-      ['tests/e2e/**', 'node'],
-    ],
-    setupFiles: ['./vitest.setup.ts'],
-    globals: true,
-  },
-});
-```
-
-グローバルセットアップ例（MSW + RTL）:
-
-```ts
-// vitest.setup.ts
-import '@testing-library/jest-dom';
-import { server } from './tests/mocks/server';
-
-beforeAll(() => server.listen());
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
-```
-
-API Route のテスト方針:
-- ビジネスロジックは `src/lib/**` に分離しユニットテスト優先
-- Route Handler 直接の統合テストは `tests/integration/api/**` に配置
-
-#### 1. ユニットテスト
-```typescript
-// MBTI判定ロジックのテスト例
-describe('MBTI Calculator', () => {
-  test('should calculate INTJ from answers', () => {
-    const answers = [
-      { axis: 'EI', score: -2 }, // 内向的
-      { axis: 'SN', score: 2 },  // 直感的
-      { axis: 'TF', score: -1 }, // 思考的
-      { axis: 'JP', score: -2 }  // 判断的
-    ];
-    
-    const result = calculateMBTI(answers);
-    expect(result).toBe('INTJ');
-  });
-});
-
-// 推奨アルゴリズムのテスト
-describe('Recommendation Algorithm', () => {
-  test('should recommend complementary personas', () => {
-    const userMBTI = 'INTJ';
-    const personas = [
-      { mbti: 'ENFP', params: { warmth: 0.9 } },
-      { mbti: 'INTJ', params: { analytical: 0.9 } },
-      { mbti: 'ESFJ', params: { empathy: 0.9 } }
-    ];
-    
-    const recommendations = getRecommendations(userMBTI, personas);
-    expect(recommendations[0].persona.mbti).toBe('ENFP'); // 最も補完的
-  });
-});
-```
-
-#### 2. 統合テスト
-```typescript
-// API統合テストの例
-describe('Chat API Integration', () => {
-  test('should stream tokens with persona parameters', async () => {
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      body: JSON.stringify({
-        messages: [{ role: 'user', content: 'Hello' }],
-        personaId: 'test-persona-id'
-      })
-    });
-    
-    const reader = response.body?.getReader();
-    const tokens = [];
-    
-    for await (const event of parseSSE(reader!)) {
-      if (event.type === 'token') {
-        tokens.push(event.text);
-      }
-    }
-    
-    expect(tokens.length).toBeGreaterThan(0);
-  });
-});
-```
-
-#### 3. E2Eテスト
-```typescript
-// Playwright E2Eテストの例
-test('complete MBTI diagnosis flow', async ({ page }) => {
-  // ログイン
-  await page.goto('/login');
-  await page.fill('[data-testid=email]', 'test@example.com');
-  await page.click('[data-testid=login-button]');
-  
-  // MBTI診断
-  await page.click('[data-testid=mbti-unknown]');
-  
-  // 24問の設問に回答
-  for (let i = 0; i < 24; i++) {
-    await page.click(`[data-testid=question-${i}-score-3]`);
-    await page.click('[data-testid=next-question]');
-  }
-  
-  // 結果確認
-  await expect(page.locator('[data-testid=mbti-result]')).toBeVisible();
-  
-  // 推奨ボット選択
-  await page.click('[data-testid=recommended-persona-0]');
-  
-  // チャット開始
-  await page.fill('[data-testid=chat-input]', 'Hello');
-  await page.click('[data-testid=send-button]');
-  
-  // ストリーミング応答確認
-  await expect(page.locator('[data-testid=assistant-message]')).toBeVisible();
-});
-```
-
-### パフォーマンステスト
-
-#### ストリーミング性能測定
-```typescript
-// ストリーミング性能テスト
-describe('Streaming Performance', () => {
-  test('should meet response time requirements', async () => {
-    const startTime = Date.now();
-    let firstTokenTime: number;
-    let tokenCount = 0;
-    
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      body: JSON.stringify({
-        messages: [{ role: 'user', content: 'Explain quantum computing' }]
-      })
-    });
-    
-    const reader = response.body?.getReader();
-    
-    for await (const event of parseSSE(reader!)) {
-      if (event.type === 'token') {
-        if (!firstTokenTime) {
-          firstTokenTime = Date.now();
-          expect(firstTokenTime - startTime).toBeLessThan(700); // 初回トークン<700ms
-        }
-        tokenCount++;
-      }
-    }
-    
-    const totalTime = Date.now() - firstTokenTime!;
-    const tokensPerSecond = (tokenCount / totalTime) * 1000;
-    expect(tokensPerSecond).toBeGreaterThan(25); // >25 tok/s
-  });
-});
-```
-
-## システム性能要件
-
-### ストリーミング性能設計
-
-**設計判断**: 要件8で定義された性能基準（初回トークン<700ms、連続トークン>25 tok/s）を満たすため、以下の技術選択を行いました：
-
-#### 1. SSE実装戦略
-```typescript
-// Route Handler設計
-export const dynamic = 'force-dynamic'; // キャッシュ無効化
-
-export async function POST(request: Request) {
-  const stream = new ReadableStream({
-    start(controller) {
-      // SSEヘッダー設定
-      const headers = {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache, no-transform',
-        'Connection': 'keep-alive',
-      };
-      
-      // LangGraph streamEvents v2使用
-      const events = graph.streamEvents(input, { version: "v2" });
-      
-      for await (const event of events) {
-        if (event.event === "on_chat_model_stream") {
-          const chunk = event.data.chunk;
-          controller.enqueue(`data: ${JSON.stringify({
-            type: "token",
-            text: chunk.content
-          })}\n\n`);
-        }
-      }
-    }
-  });
-  
-  return new Response(stream, { headers });
-}
-```
-
-#### 2. パフォーマンス監視
-```typescript
-// 性能メトリクス収集
-interface PerformanceMetrics {
-  first_token_latency: number;    // 初回トークン遅延
-  tokens_per_second: number;      // トークン/秒
-  total_tokens: number;           // 総トークン数
-  session_id: string;
-  timestamp: string;
-}
-
-// 監視実装
-class StreamingMonitor {
-  private startTime: number;
-  private firstTokenTime?: number;
-  private tokenCount = 0;
-  
-  onStreamStart() {
-    this.startTime = Date.now();
-  }
-  
-  onFirstToken() {
-    this.firstTokenTime = Date.now();
-    const latency = this.firstTokenTime - this.startTime;
-    
-    // 700ms超過時のアラート
-    if (latency > 700) {
-      console.warn(`First token latency exceeded: ${latency}ms`);
-    }
-  }
-  
-  onStreamComplete() {
-    const totalTime = Date.now() - this.firstTokenTime!;
-    const tokensPerSecond = (this.tokenCount / totalTime) * 1000;
-    
-    // 25 tok/s未満時のアラート
-    if (tokensPerSecond < 25) {
-      console.warn(`Token rate below threshold: ${tokensPerSecond} tok/s`);
-    }
-    
-    // メトリクス保存
-    this.saveMetrics({
-      first_token_latency: this.firstTokenTime! - this.startTime,
-      tokens_per_second: tokensPerSecond,
-      total_tokens: this.tokenCount,
-      session_id: this.sessionId,
-      timestamp: new Date().toISOString()
-    });
-  }
-}
-```
+### 実装指針
+- **Route Handler（Node runtime）**：
+  - **バックプレッシャ対応**の `TransformStream`（`TextEncoderStream` で JSON→UTF-8）を使用。
+  - **Nagle 無効化/圧縮回避**（`no-transform`）とヘッダ：`Content-Type: text/event-stream`, `Cache-Control: no-cache, no-transform`, `Connection: keep-alive`。
+  - **ハートビート**：15s 毎に `:\n\n` を送出（中間プロキシのアイドル切断回避）。
+  - **`retry` と `id`** を送出し、**`Last-Event-ID` 再開**に対応。
+- **LangGraph / OpenAI**：
+  - モデルからのチャンクを逐次フラッシュし、**まとめ過ぎによる遅延**を避ける。
+  - 終了時に `usage` を集計し **最後に 1 回** 送出。
+- **観測**：`instrumentation.js`（OpenTelemetry）で **first_token_latency_ms** と **tokens_per_second** を span 属性に記録、SLO 違反を可視化。
 
 ### 可用性設計
 
@@ -1346,36 +1039,72 @@ class StreamingMonitor {
 - **Circuit Breaker Pattern**: 外部API障害時のフォールバック
 - **Graceful Degradation**: 機能段階的縮退
 
-## 多言語対応設計
+## 多言語対応設計（改訂）
 
-### i18n実装戦略
+- **ライブラリ**：`next-intl` を採用し App Router と親和（RSC/静的化/プレフィクス/非プレフィクス両対応）。
+- **基本構成**：
+  - ルーティング：`app/[locale]/layout.tsx` でロケールごとにメッセージを供給。
+  - サーバで翻訳し、クライアントへは文字列を props で伝搬（必要時のみクライアント化）。
+- **例**：
+```ts
+// app/[locale]/layout.tsx
+import { NextIntlClientProvider } from 'next-intl';
+import { getMessages, getLocale } from '@/lib/i18n/server';
 
-**設計判断**: 要件9で定義された日本語・英語対応を効率的に実現するため、Next.js App Routerネイティブの国際化機能を活用：
-
-```typescript
-// i18n設定
-export const i18n = {
-  defaultLocale: 'ja',
-  locales: ['ja', 'en'],
-  localeDetection: true, // ブラウザ言語自動検出
-} as const;
-
-// 言語コンテキスト
-interface I18nContext {
-  locale: 'ja' | 'en';
-  t: (key: string, params?: Record<string, any>) => string;
-  setLocale: (locale: 'ja' | 'en') => void;
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+  const messages = await getMessages(locale);
+  return <NextIntlClientProvider locale={locale} messages={messages}>{children}</NextIntlClientProvider>;
 }
-
-// システムプロンプト多言語化
-const generateSystemPrompt = (params: PersonalityParameters, locale: 'ja' | 'en') => {
-  const templates = {
-    ja: `あなたは${params.warmth > 0.5 ? '温かく' : 'クールに'}対応するAIアシスタントです。`,
-    en: `You are an AI assistant that responds ${params.warmth > 0.5 ? 'warmly' : 'coolly'}.`
-  };
-  
-  return templates[locale];
-};
 ```
+- **メタデータ/ルート**：`generateMetadata` でもロケールを考慮。`next-intl` の推奨に従う。
 
-この設計書は、要件定義で定義された全ての機能要件を技術的に実現するための包括的な設計を提供しています。現在のNext.js + LangGraphアーキテクチャを活用しながら、Supabaseによる認証・永続化、MBTI機能、多言語対応を統合した拡張可能なシステム設計となっています。
+## 参考実装スニペット
+
+**SSE Route Handler の骨子（Node runtime）**
+```ts
+// app/api/chat/route.ts
+import { NextRequest } from 'next/server';
+
+export const runtime = 'nodejs';         // LangGraph 互換性のため Node を指定
+export const dynamic = 'force-dynamic';  // 応答キャッシュ無効（Next.js 15 の既定に合致）
+
+export async function POST(req: NextRequest) {
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+  const enc = new TextEncoder();
+
+  const send = (e: any, id?: number) => {
+    const head = id ? `id: ${id}\n` : '';
+    const body = `event: ${e.type}\n` + `data: ${JSON.stringify(e)}\n\n`;
+    return writer.write(enc.encode(head + body));
+  };
+
+  // 15s ハートビート
+  const heartbeat = setInterval(() => writer.write(enc.encode(':\n\n')), 15000);
+  await writer.write(enc.encode('retry: 5000\n\n'));
+
+  try {
+    // LangGraph 実行 → OpenAI ストリーム購読
+    let i = 0;
+    for await (const chunk of runLangGraphStream(/* ... */)) {
+      await send({ type: 'token', text: chunk }, ++i);
+    }
+    await send({ type: 'usage', tokens_out: 123, model: 'gpt-5' });
+    await send({ type: 'done' });
+  } catch (err: any) {
+    await send({ type: 'error', message: err?.message ?? 'stream_error' });
+  } finally {
+    clearInterval(heartbeat);
+    await writer.close();
+  }
+
+  return new Response(readable, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+    },
+  });
+}
+```
