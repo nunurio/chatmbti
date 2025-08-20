@@ -1,62 +1,62 @@
-# CLAUDE.md Database Management Guidelines Addition
+# CLAUDE.md データベース管理ガイドライン追加
 
-**Date**: 2025-08-20 13:25:42
-**Author**: Claude Documentation Specialist
+**日付**: 2025-08-20 13:25:42  
+**作成者**: Claude ドキュメントスペシャリスト
 
-## Summary
-Added comprehensive database management guidelines to CLAUDE.md to establish clear constraints and best practices for Supabase database operations. This update includes project structure corrections and important safety measures to prevent accidental modifications to auto-generated files.
+## 概要
+Supabaseデータベース運用における明確な制約事項とベストプラクティスを確立するため、CLAUDE.mdに包括的なデータベース管理ガイドラインを追加しました。本更新には、プロジェクト構成の修正や自動生成ファイルの誤編集防止のための重要な安全対策も含まれます。
 
-## Changes Made
+## 変更内容
 
-### 1. Added Database Management Section
-- **New Section**: Added complete "Database Management" section with critical constraints
-- **重要な制約事項** (Important Constraints):
-  - Database structure reference: Use declarative schema files in `supabase/schemas/`
-  - Migration file protection: Absolute prohibition on modifying auto-generated migration files
-  - Type definitions location: Clarified `@/lib/database.types.ts` as the source
-  - Change policy: Avoid database structure changes; require user confirmation when necessary
+### 1. データベース管理セクションの追加
+- **新規セクション**: 重要な制約事項を含む「データベース管理」セクションを追加
+- **重要な制約事項**:
+  - データベース構造の参照: `supabase/schemas/`内の宣言的スキーマファイルを利用
+  - マイグレーションファイル保護: 自動生成されたマイグレーションファイルの編集は絶対禁止
+  - 型定義ファイルの場所: `@/lib/database.types.ts`を唯一の参照元として明記
+  - 変更方針: データベース構造の変更は原則禁止、やむを得ない場合は必ずユーザー確認を経る
 
-### 2. Updated Project Structure
-- **Added Supabase Directory**: 
+### 2. プロジェクト構成の修正
+- **Supabaseディレクトリ追加**: 
   ```
   supabase/
   ├── schemas/                           # 宣言的データベーススキーマ定義
   └── migrations/                        # 自動生成マイグレーション（変更禁止）
   ```
-- **Corrected File Location**: Moved `database.types.ts` from `src/lib/supabase/` to `src/lib/` directory
-- **Updated Comments**: Added Japanese comments indicating auto-generation status
+- **ファイル配置修正**: `database.types.ts`を`src/lib/supabase/`から`src/lib/`へ移動
+- **コメント更新**: 自動生成ファイルである旨の日本語コメントを追加
 
-### 3. File Path Corrections
-- **Before**: `src/lib/supabase/database.types.ts`
-- **After**: `src/lib/database.types.ts`
-- **Reason**: Reflects actual file location and Supabase CLI auto-generation pattern
+### 3. ファイルパスの修正
+- **修正前**: `src/lib/supabase/database.types.ts`
+- **修正後**: `src/lib/database.types.ts`
+- **理由**: 実際のファイル配置とSupabase CLIの自動生成パターンに合わせるため
 
-## Technical Details
+## 技術詳細
 
-The changes establish a clear hierarchy for database management:
+本変更により、データベース管理の明確な階層構造を確立しました:
 
-1. **Schema Definition**: `supabase/schemas/` contains declarative schema files
-2. **Type Generation**: `src/lib/database.types.ts` contains auto-generated TypeScript types
-3. **Migration Safety**: `supabase/migrations/` marked as read-only auto-generated content
+1. **スキーマ定義**: `supabase/schemas/`に宣言的スキーマファイルを配置
+2. **型生成**: `src/lib/database.types.ts`に自動生成TypeScript型を格納
+3. **マイグレーション保護**: `supabase/migrations/`は自動生成・読み取り専用と明記
 
-## Lessons Learned
+## 得られた知見
 
-- **Documentation Accuracy**: Project structure documentation must reflect actual file locations
-- **Safety Measures**: Clear warnings about auto-generated files prevent accidental modifications
-- **Bilingual Documentation**: Japanese warnings in technical documentation ensure clarity for Japanese developers
-- **Change Control**: Establishing approval processes for database changes prevents schema drift
+- **ドキュメントの正確性**: プロジェクト構成の記載は実際のファイル配置と一致させることが重要
+- **安全対策**: 自動生成ファイルへの明確な警告で誤編集を防止
+- **バイリンガル対応**: 技術ドキュメントに日本語警告を併記することで日本人開発者への伝達性向上
+- **変更管理**: データベース変更の承認プロセスを設けることでスキーマドリフトを防止
 
-## Future Considerations
+## 今後の検討事項
 
-- **Schema Evolution**: Any future database changes should follow the established approval process
-- **Type Synchronization**: Ensure `database.types.ts` stays synchronized with actual database schema
-- **Migration Strategy**: Consider documenting the process for handling necessary schema changes
-- **Developer Onboarding**: New team members should be made aware of these constraints early
+- **スキーマ進化**: 今後のDB変更は必ず承認プロセスに従うこと
+- **型同期**: `database.types.ts`が常に実際のDBスキーマと同期していることを保証
+- **マイグレーション戦略**: 必要なスキーマ変更時の手順をドキュメント化することを検討
+- **開発者オンボーディング**: 新規メンバーにはこれらの制約事項を早期に周知
 
-## Files Modified
+## 変更ファイル
 - `/Users/takahashigenki/projects/chat-mvp/CLAUDE.md`
 
-## Impact Assessment
-- **Risk Level**: Low (documentation only)
-- **Breaking Changes**: None
-- **Developer Experience**: Improved through clearer guidelines and safety measures
+## 影響評価
+- **リスクレベル**: 低（ドキュメントのみ）
+- **破壊的変更**: なし
+- **開発体験**: より明確なガイドラインと安全対策により向上
