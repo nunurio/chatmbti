@@ -14,6 +14,9 @@ export default [
   // 互換レイヤで next/core-web-vitals を取り込む
   ...compat.config({ extends: ["next/core-web-vitals"] }),
   {
+    ignores: ["src/lib/database.types.ts"], // Supabase auto-generated file
+  },
+  {
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
       parserOptions: {

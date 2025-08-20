@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>認証UI検証 - MBTI Chat MVP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Login Page Mock -->
+    <div id="login-page" class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8">
+            <div class="text-center">
+                <h2 class="mt-6 text-3xl font-bold text-gray-900">
+                    ログイン
+                </h2>
+                <p class="mt-2 text-sm text-gray-600">
+                    MBTIチャットボットにサインインしてください
+                </p>
+            </div>
+            <form class="mt-8 space-y-6" action="#" method="POST">
+                <div class="space-y-4">
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700">
+                            メールアドレス
+                        </label>
+                        <input 
+                            id="email" 
+                            name="email" 
+                            type="email" 
+                            required 
+                            class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                            placeholder="your@example.com"
+                        />
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <button 
+                        type="submit" 
+                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        マジックリンクを送信
+                    </button>
+                </div>
+                
+                <div class="text-center">
+                    <p class="text-sm text-gray-600">
+                        アカウントをお持ちでない場合は
+                        <a href="#signup" class="font-medium text-blue-600 hover:text-blue-500">
+                            サインアップ
+                        </a>
+                    </p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Signup Page Mock -->
+    <div id="signup-page" class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 hidden">
+        <div class="max-w-md w-full space-y-8">
+            <div class="text-center">
+                <h2 class="mt-6 text-3xl font-bold text-gray-900">
+                    サインアップ
+                </h2>
+                <p class="mt-2 text-sm text-gray-600">
+                    新しいアカウントを作成してください
+                </p>
+            </div>
+            <form class="mt-8 space-y-6" action="#" method="POST">
+                <div class="space-y-4">
+                    <div>
+                        <label for="signup-email" class="block text-sm font-medium text-gray-700">
+                            メールアドレス
+                        </label>
+                        <input 
+                            id="signup-email" 
+                            name="email" 
+                            type="email" 
+                            required 
+                            class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                            placeholder="your@example.com"
+                        />
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <button 
+                        type="submit" 
+                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        アカウントを作成
+                    </button>
+                </div>
+                
+                <div class="text-center">
+                    <p class="text-sm text-gray-600">
+                        すでにアカウントをお持ちですか？
+                        <a href="#login" class="font-medium text-blue-600 hover:text-blue-500">
+                            ログイン
+                        </a>
+                    </p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Profile Page Mock -->
+    <div id="profile-page" class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 hidden">
+        <div class="max-w-2xl mx-auto">
+            <div class="bg-white shadow rounded-lg p-6">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">プロフィール設定</h2>
+                
+                <form class="space-y-6">
+                    <div>
+                        <label for="display-name" class="block text-sm font-medium text-gray-700">
+                            表示名
+                        </label>
+                        <input 
+                            type="text" 
+                            id="display-name"
+                            class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="あなたの表示名"
+                        />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-3">
+                            MBTIタイプ
+                        </label>
+                        <div class="grid grid-cols-4 gap-2">
+                            <button type="button" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">INTJ</button>
+                            <button type="button" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">INTP</button>
+                            <button type="button" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">ENTJ</button>
+                            <button type="button" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">ENTP</button>
+                            <button type="button" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">INFJ</button>
+                            <button type="button" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">INFP</button>
+                            <button type="button" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">ENFJ</button>
+                            <button type="button" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">ENFP</button>
+                            <button type="button" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">ISTJ</button>
+                            <button type="button" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">ISFJ</button>
+                            <button type="button" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">ESTJ</button>
+                            <button type="button" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">ESFJ</button>
+                            <button type="button" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">ISTP</button>
+                            <button type="button" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">ISFP</button>
+                            <button type="button" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500">ESTP</button>
+                            <button type="button" class="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 ring-2 ring-blue-500 bg-blue-50">ESFP</button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <button 
+                            type="submit" 
+                            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                            プロフィールを保存
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple page switching for demo
+        function showPage(pageId) {
+            document.querySelectorAll('[id$="-page"]').forEach(page => {
+                page.classList.add('hidden');
+            });
+            document.getElementById(pageId).classList.remove('hidden');
+        }
+
+        // Navigation event listeners
+        document.addEventListener('click', (e) => {
+            if (e.target.getAttribute('href') === '#signup') {
+                e.preventDefault();
+                showPage('signup-page');
+            } else if (e.target.getAttribute('href') === '#login') {
+                e.preventDefault();
+                showPage('login-page');
+            }
+        });
+
+        // MBTI button selection
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('#profile-page button[type="button"]')) {
+                // Remove selection from all buttons
+                document.querySelectorAll('#profile-page button[type="button"]').forEach(btn => {
+                    btn.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50');
+                });
+                // Add selection to clicked button
+                e.target.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50');
+            }
+        });
+
+        // Add tabs for easy switching
+        const tabsHtml = `
+            <div class="fixed top-4 left-4 bg-white shadow-lg rounded-lg p-2 z-50">
+                <div class="flex space-x-2">
+                    <button onclick="showPage('login-page')" class="px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded">Login</button>
+                    <button onclick="showPage('signup-page')" class="px-3 py-1 text-xs bg-green-100 text-green-800 rounded">Signup</button>
+                    <button onclick="showPage('profile-page')" class="px-3 py-1 text-xs bg-purple-100 text-purple-800 rounded">Profile</button>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('afterbegin', tabsHtml);
+    </script>
+</body>
+</html>

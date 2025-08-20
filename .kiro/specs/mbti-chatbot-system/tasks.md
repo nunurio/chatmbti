@@ -1,28 +1,47 @@
 # MBTI チャットボットシステム 実装タスク
 
+## 進捗サマリ
+
+**最終更新日:** 2025-08-20
+
+### 完了済みタスク
+- ✅ **タスク1**: Supabase基盤セットアップとデータベース構築（2025-08-19完了）
+- ✅ **タスク2**: 認証システム実装（2025-08-20完了）
+- ✅ **タスク7.3**: チャット操作機能実装
+
+### 進行中タスク
+- 🔄 **タスク7.2**: ストリーミング機能強化（部分完了）
+  - Node ランタイム、SSE基本実装、LangGraph統合は完了
+  - 残り: dynamic設定、拡張機能、監査ログ実装
+
+### 次の優先タスク
+1. **タスク7.2**: ストリーミング機能強化の残作業
+2. **タスク3**: 多言語対応システム実装
+3. **タスク4**: MBTI診断システム実装
+
 ## 実装タスク一覧
 
 ### 基盤システム
 
-- [ ] 1. Supabase基盤セットアップとデータベース構築
-  - Supabaseクライアントライブラリのインストールと設定
-  - PostgreSQL拡張の有効化（pgcrypto, citext）
-  - ENUM型作成（mbti_code, message_role, session_status, visibility, role_type, mbti_axis）
-  - データベーススキーマ作成（profiles, user_roles, bot_personas, sessions, messages, message_feedback, mbti_questions, mbti_tests, mbti_answers, mbti_compatibilities, sse_events）
-  - ユーティリティ/トリガ関数作成（set_updated_at, bump_session_on_message）
-  - 管理者判定関数 is_admin() の作成と権限付与
-  - RPC post_user_message(uuid, text) の作成と権限付与
-  - Row Level Security (RLS) ポリシー実装（全テーブル: profiles/user_roles/bot_personas/sessions/messages/message_feedback/mbti_questions/mbti_tests/mbti_answers/mbti_compatibilities/sse_events）
-  - 環境変数設定とSupabaseクライアント初期化
+- [x] 1. Supabase基盤セットアップとデータベース構築
+  - [x] Supabaseクライアントライブラリのインストールと設定
+  - [x] PostgreSQL拡張の有効化（pgcrypto, citext）
+  - [x] ENUM型作成（mbti_code, message_role, session_status, visibility, role_type, mbti_axis）
+  - [x] データベーススキーマ作成（profiles, user_roles, bot_personas, sessions, messages, message_feedback, mbti_questions, mbti_tests, mbti_answers, mbti_compatibilities, sse_events）
+  - [x] ユーティリティ/トリガ関数作成（set_updated_at, bump_session_on_message）
+  - [x] 管理者判定関数 is_admin() の作成と権限付与
+  - [x] RPC post_user_message(uuid, text) の作成と権限付与
+  - [x] Row Level Security (RLS) ポリシー実装（全テーブル: profiles/user_roles/bot_personas/sessions/messages/message_feedback/mbti_questions/mbti_tests/mbti_answers/mbti_compatibilities/sse_events）
+  - [x] 環境変数設定とSupabaseクライアント初期化
   - _要件: 1.1, 6.1, 6.3, 6.4, 6.5, 6.7_
+  - **完了日: 2025-08-19**
 
-- [ ] 2. 認証システム実装
-  - Supabase Auth統合とAuthProviderコンポーネント作成
-  - Magic Link認証フローの実装（ログイン・サインアップ画面）
-  - 認証状態管理とProtectedRouteコンポーネント作成
-  - プロフィール作成・更新API実装（/api/auth/profile）
-  - 初期管理者ロールの付与（`user_roles` シード/管理SQL）
-  - _要件: 1.1, 1.2, 1.6_
+- [x] 2. 認証システム実装 ✅ 2025-08-20完了
+  - Supabase Auth統合とAuthProviderコンポーネント作成 ✅
+  - Magic Link認証フローの実装（ログイン・サインアップ画面） ✅
+  - 認証状態管理とProtectedRouteコンポーネント作成 ✅
+  - プロフィール作成・更新API実装（/api/auth/profile） ✅
+  - _要件: 1.1, 1.2, 1.6_ ✅
 
 - [ ] 3. 多言語対応システム実装
   - i18n設定とLanguageProviderコンポーネント作成
@@ -85,9 +104,9 @@
   - _要件: 2.7, 6.2_
 
 - [ ] 7.2 ストリーミング機能強化
-  - [x] Node ランタイム指定（`export const runtime = "nodejs"`）
-  - [x] SSE 基本実装（`token`/`error`/`done` の最小配信。`Content-Type`, `Cache-Control`, `Connection`, `X-Accel-Buffering` ヘッダ）
-  - [x] LangGraph ストリーミング統合（`app.streamEvents({ version: "v2" })`）
+  - [x] Node ランタイム指定（`export const runtime = "nodejs"`）**完了済み**
+  - [x] SSE 基本実装（`token`/`error`/`done` の最小配信。`Content-Type`, `Cache-Control`, `Connection`, `X-Accel-Buffering` ヘッダ）**完了済み**
+  - [x] LangGraph ストリーミング統合（`app.streamEvents({ version: "v2" })`）**完了済み**
   - [ ] `export const dynamic = "force-dynamic"` を追加（API応答のキャッシュ回避）
   - [ ] 既存 `/api/chat/route.ts` の拡張（`personaId`, `sessionId` 対応）
   - [ ] 型付き SSE の拡充（`event: token|progress|usage|error|done`、`retry`/`id`/`Last-Event-ID` 再開、15s ハートビート）
@@ -182,3 +201,32 @@
   - 環境変数設定とシードデータ投入
   - 本番環境での動作確認
   - _要件: 全要件の本番環境検証_
+
+## 実装推奨順序
+
+### フェーズ1: 基盤機能（完了済み）
+1. ✅ Supabase基盤セットアップ（タスク1）
+2. ✅ 基本チャット機能（タスク7.3）
+
+### フェーズ2: 認証とユーザー管理（完了済み）
+1. ✅ 認証システム実装（タスク2）
+2. ✅ プロフィール管理機能
+
+### フェーズ3: MBTI機能
+1. MBTI診断システム実装（タスク4）
+2. 性格パラメータシステム（タスク5）
+3. MBTI推奨システム（タスク6）
+
+### フェーズ4: チャット機能拡張
+1. ストリーミング機能強化の完了（タスク7.2）
+2. データ永続化統合（タスク7.1）
+3. データ移行システム（タスク8）
+
+### フェーズ5: 品質向上
+1. 多言語対応（タスク3）
+2. エラーハンドリングと監視（タスク9）
+3. UI/UX最終調整（タスク10）
+
+### フェーズ6: リリース準備
+1. テスト実装（タスク11）
+2. プロダクション準備（タスク12）

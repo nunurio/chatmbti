@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
   // 既存ヘッダを引き継いだ NextResponse を作成
-  let response = NextResponse.next({
+  const response = NextResponse.next({
     request: { headers: request.headers },
   })
 
