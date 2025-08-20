@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { getSession, getUser, signOut } from '@/lib/supabase/auth';
 
-// Mock @/lib/supabase/client
+// Mock @/lib/supabase/server
 const mockSupabaseClient = {
   auth: {
     getUser: vi.fn(),
@@ -10,7 +10,7 @@ const mockSupabaseClient = {
   },
 };
 
-vi.mock('@/lib/supabase/client', () => ({
+vi.mock('@/lib/supabase/server', () => ({
   createServerClient: vi.fn(() => Promise.resolve(mockSupabaseClient)),
 }));
 

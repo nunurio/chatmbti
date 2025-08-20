@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createBrowserClient, createServerClient } from '@/lib/supabase/client';
+import { createBrowserClient } from '@/lib/supabase/client';
+import { createServerClient } from '@/lib/supabase/server';
 
 // Mock @supabase/ssr
 const mockBrowserClient = { test: 'browser-client' };

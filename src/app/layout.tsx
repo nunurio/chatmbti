@@ -29,8 +29,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* Temporarily disabled AuthProvider for UI verification */}
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         <Toaster richColors expand={false} position="top-right" />
       </body>
     </html>

@@ -37,7 +37,7 @@ const mockFrom = {
   single: vi.fn(),
 };
 
-vi.mock('@/lib/supabase/client', () => ({
+vi.mock('@/lib/supabase/server', () => ({
   createServerClient: vi.fn().mockResolvedValue(mockSupabase),
 }));
 

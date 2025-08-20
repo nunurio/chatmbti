@@ -9,10 +9,6 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
     include: ['tests/**/*.{test,spec}.{ts,tsx}'],
-    environmentMatchGlobs: [
-      ['tests/integration/**', 'node'],
-      ['tests/e2e/**', 'node']
-    ],
     typecheck: {
       tsconfig: './tsconfig.test.json'
     }

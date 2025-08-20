@@ -269,3 +269,4 @@ This project follows the TDD approach, inspired by the methodology of Takuto Wad
 
 - All operations to understand the project structure, implementation details, and read files must be performed using Serena MCP.
 - Use the Playwright MCP to verify implementation details, especially for UI-related tasks by taking screenshots.
+ - 【重要】**Playwright MCP を起動する際は、必ず `playwright-ui-verification` サブエージェントに起動させること（必須）**
