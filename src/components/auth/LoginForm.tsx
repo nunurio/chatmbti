@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useTranslations } from 'next-intl'
 import { createBrowserClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,6 +12,8 @@ interface LoginFormProps {
 }
 
 export function LoginForm({ mode }: LoginFormProps) {
+  const t = useTranslations('Auth.login')
+  const tSignup = useTranslations('Auth.signup')
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -18,11 +21,11 @@ export function LoginForm({ mode }: LoginFormProps) {
 
   const validateEmail = (email: string): string => {
     if (!email) {
-      return 'メールアドレスが必要です'
+      return t('errors.emailRequired')
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
-      return '有効なメールアドレスを入力してください'
+      return t('errors.emailInvalid')
     }
     return ''
   }
@@ -51,10 +54,10 @@ export function LoginForm({ mode }: LoginFormProps) {
       if (error) {
         setError(error.message)
       } else {
-        setSuccess('メールを確認してください')
+        setSuccess(t('success'))
       }
     } catch {
-      setError('送信中にエラーが発生しました')
+      setError(t('errors.sendingError'))
     } finally {
       setIsLoading(false)
     }
@@ -64,24 +67,24 @@ export function LoginForm({ mode }: LoginFormProps) {
     <div className="w-full max-w-md mx-auto space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-bold text-center">
-          {mode === 'login' ? 'ログイン' : 'アカウント作成'}
+          {mode === 'login' ? t('title') : tSignup('title')}
         </h1>
         <p className="text-center text-muted-foreground">
-          メールアドレスでMagic Linkを送信します
+          {t('magicLinkDescription')}
         </p>
       </div>
       
       <form onSubmit={(e) => void handleSubmit(e)} noValidate className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email">メールアドレス</Label>
+          <Label htmlFor="email">{t('emailLabel')}</Label>
           <Input
             id="email"
             type="email"
-            placeholder="name@example.com"
+            placeholder={t('emailPlaceholder')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={isLoading}
-            aria-label="Email"
+            aria-label={t('emailLabel')}
           />
         </div>
         
@@ -98,7 +101,7 @@ export function LoginForm({ mode }: LoginFormProps) {
         )}
         
         <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? '送信中...' : (mode === 'login' ? 'ログイン' : 'サインアップ')}
+          {isLoading ? t('sending') : (mode === 'login' ? t('submitButton') : tSignup('submitButton'))}
         </Button>
       </form>
     </div>

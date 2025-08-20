@@ -327,6 +327,7 @@ export type Database = {
           id: string
           is_public: boolean
           last_seen_at: string | null
+          locale: 'ja' | 'en' | null
           mbti_type: Database["public"]["Enums"]["mbti_code"] | null
           preferences: Json
           updated_at: string
@@ -340,6 +341,7 @@ export type Database = {
           id: string
           is_public?: boolean
           last_seen_at?: string | null
+          locale?: 'ja' | 'en' | null
           mbti_type?: Database["public"]["Enums"]["mbti_code"] | null
           preferences?: Json
           updated_at?: string
@@ -353,6 +355,7 @@ export type Database = {
           id?: string
           is_public?: boolean
           last_seen_at?: string | null
+          locale?: 'ja' | 'en' | null
           mbti_type?: Database["public"]["Enums"]["mbti_code"] | null
           preferences?: Json
           updated_at?: string

@@ -1,0 +1,226 @@
+{
+  "Common": {
+    "navigation": {
+      "home": "ホーム",
+      "chat": "チャット",
+      "profile": "プロフィール",
+      "settings": "設定",
+      "logout": "ログアウト"
+    },
+    "actions": {
+      "save": "保存",
+      "cancel": "キャンセル",
+      "delete": "削除",
+      "edit": "編集",
+      "back": "戻る",
+      "next": "次へ",
+      "submit": "送信",
+      "confirm": "確認"
+    },
+    "status": {
+      "loading": "読み込み中...",
+      "saving": "保存中...",
+      "success": "成功しました",
+      "error": "エラーが発生しました"
+    },
+    "language": "言語",
+    "japanese": "日本語",
+    "english": "English",
+    "selectLanguage": "言語を選択"
+  },
+  "Auth": {
+    "login": {
+      "title": "ログイン",
+      "emailLabel": "メールアドレス",
+      "emailPlaceholder": "name@example.com",
+      "passwordLabel": "パスワード",
+      "passwordPlaceholder": "パスワードを入力",
+      "submitButton": "ログイン",
+      "signupLink": "アカウントをお持ちでない方はこちら",
+      "signupPrompt": "アカウントをお持ちでない方は",
+      "signupLinkText": "アカウント作成",
+      "forgotPassword": "パスワードをお忘れですか？",
+      "rememberMe": "ログイン状態を保持",
+      "magicLinkDescription": "メールアドレスでMagic Linkを送信します",
+      "sending": "送信中...",
+      "success": "メールを確認してください",
+      "errors": {
+        "invalidCredentials": "メールアドレスまたはパスワードが正しくありません",
+        "networkError": "ネットワークエラーが発生しました",
+        "serverError": "サーバーエラーが発生しました",
+        "emailRequired": "メールアドレスが必要です",
+        "emailInvalid": "有効なメールアドレスを入力してください",
+        "sendingError": "送信中にエラーが発生しました"
+      }
+    },
+    "signup": {
+      "title": "アカウント作成",
+      "emailLabel": "メールアドレス",
+      "passwordLabel": "パスワード",
+      "confirmPasswordLabel": "パスワード（確認）",
+      "submitButton": "サインアップ",
+      "loginLink": "既にアカウントをお持ちの方はこちら",
+      "loginPrompt": "既にアカウントをお持ちの方は",
+      "loginLinkText": "ログイン",
+      "termsAgreement": "利用規約に同意します",
+      "errors": {
+        "emailInUse": "このメールアドレスは既に使用されています",
+        "passwordMismatch": "パスワードが一致しません",
+        "weakPassword": "パスワードは8文字以上で入力してください"
+      }
+    },
+    "profile": {
+      "title": "プロフィール設定",
+      "displayName": "表示名",
+      "displayNamePlaceholder": "表示名を入力してください",
+      "email": "メールアドレス",
+      "language": "言語設定",
+      "theme": "テーマ",
+      "mbtiType": "MBTIタイプ",
+      "mbtiUnknown": "わからない",
+      "bio": "自己紹介",
+      "loading": "読み込み中...",
+      "saving": "保存中...",
+      "saveButton": "保存",
+      "cancelButton": "キャンセル",
+      "deleteAccount": "アカウントを削除",
+      "success": "プロフィールを更新しました",
+      "errors": {
+        "loadFailed": "プロフィールの読み込みに失敗しました",
+        "displayNameRequired": "表示名を入力してください",
+        "saveFailed": "保存に失敗しました"
+      }
+    }
+  },
+  "Chat": {
+    "title": "AIチャット",
+    "inputPlaceholder": "メッセージを入力。Enterで送信、Shift+Enterで改行",
+    "sendButton": "送信",
+    "stopButton": "停止",
+    "newChat": "新しいチャット",
+    "newChatButton": "新規チャット",
+    "conversations": "会話",
+    "conversationsSaved": "会話はローカルに保存されます",
+    "conversationsAriaLabel": "会話一覧",
+    "systemPromptAriaLabel": "System Prompt",
+    "clearHistory": "履歴をクリア",
+    "typing": "入力中...",
+    "thinking": "考え中...",
+    "sessionTitle": "チャットセッション",
+    "welcome": "こんにちは！何かお手伝いできることはありますか？",
+    "emptyStateMessage": "最初のメッセージを送信して会話を始めましょう",
+    "errors": {
+      "sendFailed": "メッセージの送信に失敗しました",
+      "connectionLost": "接続が切断されました",
+      "rateLimited": "メッセージの送信回数が制限を超えました",
+      "generic": "エラー",
+      "networkError": "ネットワークエラーが発生しました"
+    },
+    "prompts": {
+      "suggestion1": "このプロジェクトの設計方針を要約して",
+      "suggestion2": "次の文章を丁寧な日本語に書き直して",
+      "suggestion3": "コードのパフォーマンス改善案を3つ出して"
+    },
+    "promptEditor": {
+      "triggerButton": "性格を変更",
+      "title": "モデルの性格（System Prompt）",
+      "label": "System prompt",
+      "placeholder": "例: あなたは簡潔かつ丁寧に返答する日本語アシスタントです。...",
+      "resetButton": "デフォルトに戻す",
+      "saveButton": "保存"
+    }
+  },
+  "MBTI": {
+    "diagnosis": {
+      "title": "MBTI診断",
+      "subtitle": "あなたの性格タイプを見つけましょう",
+      "startButton": "診断を開始",
+      "nextQuestion": "次の質問",
+      "previousQuestion": "前の質問",
+      "submitButton": "診断結果を見る",
+      "progress": "進捗: {current}/{total}",
+      "question": "質問 {number}"
+    },
+    "result": {
+      "title": "診断結果",
+      "yourType": "あなたのタイプは",
+      "description": "タイプの説明",
+      "strengths": "強み",
+      "weaknesses": "弱み",
+      "recommendations": "おすすめのAIパーソナ",
+      "retakeButton": "もう一度診断する",
+      "saveButton": "結果を保存"
+    },
+    "types": {
+      "INTJ": "建築家",
+      "INTP": "論理学者",
+      "ENTJ": "指揮官",
+      "ENTP": "討論者",
+      "INFJ": "提唱者",
+      "INFP": "仲介者",
+      "ENFJ": "主人公",
+      "ENFP": "運動家",
+      "ISTJ": "管理者",
+      "ISFJ": "擁護者",
+      "ESTJ": "幹部",
+      "ESFJ": "領事",
+      "ISTP": "巨匠",
+      "ISFP": "冒険家",
+      "ESTP": "起業家",
+      "ESFP": "エンターテイナー"
+    }
+  },
+  "Personas": {
+    "title": "AIパーソナ",
+    "subtitle": "チャットボットの性格を選択",
+    "createNew": "新規作成",
+    "edit": "編集",
+    "delete": "削除",
+    "select": "選択",
+    "selected": "選択中",
+    "parameters": {
+      "creativity": "創造性",
+      "empathy": "共感性",
+      "analyticalThinking": "分析的思考",
+      "friendliness": "親しみやすさ",
+      "formality": "フォーマル度"
+    },
+    "presets": {
+      "mentor": "メンター",
+      "friend": "友達",
+      "teacher": "教師",
+      "coach": "コーチ",
+      "assistant": "アシスタント"
+    }
+  },
+  "Settings": {
+    "title": "設定",
+    "sections": {
+      "general": "一般",
+      "appearance": "外観",
+      "notifications": "通知",
+      "privacy": "プライバシー",
+      "language": "言語"
+    },
+    "theme": {
+      "label": "テーマ",
+      "light": "ライト",
+      "dark": "ダーク",
+      "system": "システム設定に従う",
+      "toggle": "テーマ切替"
+    },
+    "language": {
+      "label": "言語",
+      "japanese": "日本語",
+      "english": "English"
+    }
+  },
+  "Errors": {
+    "404": "ページが見つかりません",
+    "500": "サーバーエラー",
+    "generic": "エラーが発生しました",
+    "networkError": "ネットワークエラー",
+    "unauthorized": "認証が必要です",
+    "forbidden": "アクセスが拒否されました"
+  }
+}

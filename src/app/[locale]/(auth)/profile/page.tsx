@@ -1,6 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
+
+// Force dynamic rendering for this protected page
+export const dynamic = 'force-dynamic';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,24 +21,15 @@ const MBTI_TYPES: MBTIType[] = [
   'ISTP', 'ISFP', 'ESTP', 'ESFP'
 ];
 
-const ERROR_MESSAGES = {
-  LOAD_PROFILE_FAILED: 'プロフィールの読み込みに失敗しました',
-  DISPLAY_NAME_REQUIRED: '表示名を入力してください',
-  SAVE_FAILED: '保存に失敗しました'
-} as const;
-
 export default function ProfilePage() {
+  const t = useTranslations('Auth.profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [selectedMBTI, setSelectedMBTI] = useState<MBTIType | 'unknown' | null>(null);
 
-  useEffect(() => {
-    void loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     try {
       const response = await fetch('/api/auth/profile');
       if (response.ok) {
@@ -42,18 +37,22 @@ export default function ProfilePage() {
         setDisplayName(result.data.display_name || '');
         setSelectedMBTI(result.data.mbti_type || null);
       } else {
-        setError(ERROR_MESSAGES.LOAD_PROFILE_FAILED);
+        setError(t('errors.loadFailed'));
       }
     } catch {
-      setError(ERROR_MESSAGES.LOAD_PROFILE_FAILED);
+      setError(t('errors.loadFailed'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    void loadProfile();
+  }, [loadProfile]);
 
   const saveProfile = async () => {
     if (!displayName.trim()) {
-      setError(ERROR_MESSAGES.DISPLAY_NAME_REQUIRED);
+      setError(t('errors.displayNameRequired'));
       return;
     }
 
@@ -73,10 +72,10 @@ export default function ProfilePage() {
       if (response.ok) {
         // Profile updated successfully
       } else {
-        setError(ERROR_MESSAGES.SAVE_FAILED);
+        setError(t('errors.saveFailed'));
       }
     } catch {
-      setError(ERROR_MESSAGES.SAVE_FAILED);
+      setError(t('errors.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -86,7 +85,7 @@ export default function ProfilePage() {
     return (
       <ProtectedRoute>
         <div className="flex items-center justify-center min-h-screen">
-          <div>読み込み中...</div>
+          <div>{t('loading')}</div>
         </div>
       </ProtectedRoute>
     );
@@ -95,7 +94,7 @@ export default function ProfilePage() {
   return (
     <ProtectedRoute>
       <div className="container mx-auto p-6 max-w-2xl">
-        <h1 className="text-2xl font-bold mb-6">プロフィール設定</h1>
+        <h1 className="text-2xl font-bold mb-6">{t('title')}</h1>
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
@@ -105,19 +104,19 @@ export default function ProfilePage() {
 
         <div className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="display-name">表示名</Label>
+            <Label htmlFor="display-name">{t('displayName')}</Label>
             <Input
               id="display-name"
-              aria-label="表示名"
+              aria-label={t('displayName')}
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="表示名を入力してください"
+              placeholder={t('displayNamePlaceholder')}
             />
           </div>
 
           <div className="space-y-4">
-            <Label>MBTIタイプ</Label>
+            <Label>{t('mbtiType')}</Label>
             <div className="grid grid-cols-4 gap-3">
               {MBTI_TYPES.map((type) => (
                 <Button
@@ -137,7 +136,7 @@ export default function ProfilePage() {
               className={`w-full ${selectedMBTI === 'unknown' ? 'ring-2 ring-blue-500' : ''}`}
               onClick={() => setSelectedMBTI('unknown')}
             >
-              わからない
+              {t('mbtiUnknown')}
             </Button>
           </div>
 
@@ -146,7 +145,7 @@ export default function ProfilePage() {
             disabled={saving}
             className="w-full"
           >
-            {saving ? '保存中...' : '保存'}
+            {saving ? t('saving') : t('saveButton')}
           </Button>
         </div>
       </div>

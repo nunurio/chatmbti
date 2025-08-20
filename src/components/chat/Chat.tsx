@@ -14,11 +14,14 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Plus, Send, StopCircle, Menu, Bot, UserRound, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 const LS_SESSIONS = "chat-mvp:sessions";
 const LS_SYSTEM = "chat-mvp:system";
 
 export function Chat() {
+  const t = useTranslations('Chat');
+  
   const [sessions, setSessions] = useLocalStorage<ChatSession[]>(LS_SESSIONS, []);
   const [systemPrompt, setSystemPrompt] = useLocalStorage<string>(LS_SYSTEM, "You are a helpful assistant.");
   const [currentId, setCurrentId] = useState<string>(() => sessions[0]?.id ?? nanoid());
@@ -27,13 +30,13 @@ export function Chat() {
     return (
       found ?? {
         id: currentId,
-        title: "新しいチャット",
+        title: t('newChat'),
         createdAt: Date.now(),
         updatedAt: Date.now(),
         messages: [],
       }
     );
-  }, [sessions, currentId]);
+  }, [sessions, currentId, t]);
 
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -57,7 +60,7 @@ export function Chat() {
   const pushMessage = (m: Omit<Message, "id">) => {
     current.messages.push({ id: nanoid(), ...m });
     current.updatedAt = Date.now();
-    if (current.title === "新しいチャット" && m.role === "user") {
+    if (current.title === t('newChat') && m.role === "user") {
       current.title = m.content.slice(0, 30);
     }
   };
@@ -97,14 +100,14 @@ export function Chat() {
           current.updatedAt = Date.now();
           forceRerender((n) => n + 1);
         } else if (anyEv?.type === "error") {
-          assistant.content = `エラー: ${anyEv.message ?? "unknown"}`;
+          assistant.content = `${t('errors.generic')}: ${anyEv.message ?? "unknown"}`;
           current.updatedAt = Date.now();
           forceRerender((n) => n + 1);
-          toast.error(anyEv.message ?? "エラーが発生しました");
+          toast.error(anyEv.message ?? t('errors.generic'));
         }
       }
     } catch {
-      toast.error("ネットワークエラーが発生しました");
+      toast.error(t('errors.networkError'));
     } finally {
       setIsStreaming(false);
     }
@@ -127,17 +130,17 @@ export function Chat() {
         <div className="flex items-center gap-2 rounded-xl border bg-background/60 px-3 py-2">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline" size="icon" aria-label="会話一覧">
+              <Button variant="outline" size="icon" aria-label={t('conversationsAriaLabel')}>
                 <Menu className="size-4" />
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="p-0">
               <SheetHeader>
-                <SheetTitle>会話</SheetTitle>
+                <SheetTitle>{t('conversations')}</SheetTitle>
               </SheetHeader>
               <div className="p-2 flex flex-col gap-1">
                 <Button variant="secondary" onClick={newChat} className="justify-start">
-                  <Plus className="size-4" /> 新規チャット
+                  <Plus className="size-4" /> {t('newChatButton')}
                 </Button>
                 <Separator className="my-2" />
                 <div className="flex flex-col">
@@ -156,15 +159,15 @@ export function Chat() {
             </SheetContent>
           </Sheet>
           <Button variant="secondary" onClick={newChat} className="hidden sm:flex">
-            <Plus className="size-4" /> 新規
+            <Plus className="size-4" /> {t('newChatButton')}
           </Button>
           <Separator orientation="vertical" className="h-6" />
-          <div className="text-sm text-muted-foreground hidden md:block">会話はローカルに保存されます</div>
+          <div className="text-sm text-muted-foreground hidden md:block">{t('conversationsSaved')}</div>
           <div className="flex-1" />
           <PromptEditor
             value={systemPrompt}
             onSave={setSystemPrompt}
-            trigger={<Button variant="ghost" size="icon" aria-label="System Prompt"><Sparkles className="size-4" /></Button>}
+            trigger={<Button variant="ghost" size="icon" aria-label={t('systemPromptAriaLabel')}><Sparkles className="size-4" /></Button>}
           />
           <ThemeToggle />
         </div>
@@ -188,7 +191,7 @@ export function Chat() {
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="メッセージを入力。Enterで送信、Shift+Enterで改行"
+            placeholder={t('inputPlaceholder')}
             className="min-h-16"
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -199,10 +202,10 @@ export function Chat() {
           />
           <div className="flex items-center gap-2">
             <Button onClick={() => void send()} disabled={isStreaming || !input.trim()}>
-              <Send className="size-4" /> 送信
+              <Send className="size-4" /> {t('sendButton')}
             </Button>
             <Button variant="secondary" onClick={stop} disabled={!isStreaming}>
-              <StopCircle className="size-4" /> 停止
+              <StopCircle className="size-4" /> {t('stopButton')}
             </Button>
             <div className="ml-auto text-xs text-muted-foreground">System: {systemPrompt.slice(0, 24)}{systemPrompt.length > 24 ? "…" : ""}</div>
           </div>
@@ -213,7 +216,8 @@ export function Chat() {
 }
 
 function MessageTitle({ title }: { title: string }) {
-  return <span className="truncate">{title || "新しいチャット"}</span>;
+  const t = useTranslations('Chat');
+  return <span className="truncate">{title || t('newChat')}</span>;
 }
 
 function MessageBubble({ message }: { message: Message }) {
@@ -244,17 +248,18 @@ function MessageBubble({ message }: { message: Message }) {
 }
 
 function EmptyState({ onPick }: { onPick: (t: string) => void }) {
+  const t = useTranslations('Chat');
   const suggestions = [
-    "このプロジェクトの設計方針を要約して",
-    "次の文章を丁寧な日本語に書き直して",
-    "コードのパフォーマンス改善案を3つ出して",
+    t('prompts.suggestion1'),
+    t('prompts.suggestion2'),
+    t('prompts.suggestion3'),
   ];
   return (
     <div className="flex flex-col items-center justify-center text-center py-16 gap-4">
       <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center border">
         <MessageSquareIcon />
       </div>
-      <div className="text-sm text-muted-foreground">最初のメッセージを送信して会話を始めましょう</div>
+      <div className="text-sm text-muted-foreground">{t('emptyStateMessage')}</div>
       <div className="grid gap-2 w-full sm:grid-cols-3">
         {suggestions.map((s) => (
           <Button key={s} variant="outline" className="justify-start rounded-xl" onClick={() => onPick(s)}>

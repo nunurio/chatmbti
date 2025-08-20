@@ -1,0 +1,226 @@
+{
+  "Common": {
+    "navigation": {
+      "home": "Home",
+      "chat": "Chat",
+      "profile": "Profile",
+      "settings": "Settings",
+      "logout": "Logout"
+    },
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "edit": "Edit",
+      "back": "Back",
+      "next": "Next",
+      "submit": "Submit",
+      "confirm": "Confirm"
+    },
+    "status": {
+      "loading": "Loading...",
+      "saving": "Saving...",
+      "success": "Success",
+      "error": "An error occurred"
+    },
+    "language": "Language",
+    "japanese": "日本語", 
+    "english": "English",
+    "selectLanguage": "Select language"
+  },
+  "Auth": {
+    "login": {
+      "title": "Login",
+      "emailLabel": "Email",
+      "emailPlaceholder": "name@example.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Enter your password",
+      "submitButton": "Login",
+      "signupLink": "Don't have an account? Sign up",
+      "signupPrompt": "Don't have an account?",
+      "signupLinkText": "Sign Up",
+      "forgotPassword": "Forgot password?",
+      "rememberMe": "Remember me",
+      "magicLinkDescription": "We will send you a Magic Link via email",
+      "sending": "Sending...",
+      "success": "Please check your email",
+      "errors": {
+        "invalidCredentials": "Invalid email or password",
+        "networkError": "Network error occurred",
+        "serverError": "Server error occurred",
+        "emailRequired": "Email is required",
+        "emailInvalid": "Please enter a valid email address",
+        "sendingError": "Error occurred while sending"
+      }
+    },
+    "signup": {
+      "title": "Sign Up",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "confirmPasswordLabel": "Confirm Password",
+      "submitButton": "Sign Up",
+      "loginLink": "Already have an account? Login",
+      "loginPrompt": "Already have an account?",
+      "loginLinkText": "Login",
+      "termsAgreement": "I agree to the terms of service",
+      "errors": {
+        "emailInUse": "This email is already in use",
+        "passwordMismatch": "Passwords do not match",
+        "weakPassword": "Password must be at least 8 characters"
+      }
+    },
+    "profile": {
+      "title": "Profile Settings",
+      "displayName": "Display Name",
+      "displayNamePlaceholder": "Enter your display name",
+      "email": "Email",
+      "language": "Language",
+      "theme": "Theme",
+      "mbtiType": "MBTI Type",
+      "mbtiUnknown": "I don't know",
+      "bio": "Bio",
+      "loading": "Loading...",
+      "saving": "Saving...",
+      "saveButton": "Save",
+      "cancelButton": "Cancel",
+      "deleteAccount": "Delete Account",
+      "success": "Profile updated successfully",
+      "errors": {
+        "loadFailed": "Failed to load profile",
+        "displayNameRequired": "Please enter a display name",
+        "saveFailed": "Failed to save profile"
+      }
+    }
+  },
+  "Chat": {
+    "title": "AI Chat",
+    "inputPlaceholder": "Type a message. Press Enter to send, Shift+Enter for new line",
+    "sendButton": "Send",
+    "stopButton": "Stop",
+    "newChat": "New Chat",
+    "newChatButton": "New Chat",
+    "conversations": "Conversations",
+    "conversationsSaved": "Conversations are saved locally",
+    "conversationsAriaLabel": "Conversation list",
+    "systemPromptAriaLabel": "System Prompt",
+    "clearHistory": "Clear History",
+    "typing": "Typing...",
+    "thinking": "Thinking...",
+    "sessionTitle": "Chat Session",
+    "welcome": "Hello! How can I help you today?",
+    "emptyStateMessage": "Send your first message to start a conversation",
+    "errors": {
+      "sendFailed": "Failed to send message",
+      "connectionLost": "Connection lost",
+      "rateLimited": "Message rate limit exceeded",
+      "generic": "Error",
+      "networkError": "Network error occurred"
+    },
+    "prompts": {
+      "suggestion1": "Summarize the design principles of this project",
+      "suggestion2": "Rewrite the following text in polite English",
+      "suggestion3": "Give me 3 code performance improvement suggestions"
+    },
+    "promptEditor": {
+      "triggerButton": "Change personality",
+      "title": "Model Personality (System Prompt)",
+      "label": "System prompt",
+      "placeholder": "Example: You are a concise and polite English assistant...",
+      "resetButton": "Reset to default",
+      "saveButton": "Save"
+    }
+  },
+  "MBTI": {
+    "diagnosis": {
+      "title": "MBTI Assessment",
+      "subtitle": "Discover your personality type",
+      "startButton": "Start Assessment",
+      "nextQuestion": "Next Question",
+      "previousQuestion": "Previous Question",
+      "submitButton": "See Results",
+      "progress": "Progress: {current}/{total}",
+      "question": "Question {number}"
+    },
+    "result": {
+      "title": "Your Results",
+      "yourType": "Your type is",
+      "description": "Type Description",
+      "strengths": "Strengths",
+      "weaknesses": "Weaknesses",
+      "recommendations": "Recommended AI Personas",
+      "retakeButton": "Retake Assessment",
+      "saveButton": "Save Results"
+    },
+    "types": {
+      "INTJ": "Architect",
+      "INTP": "Logician",
+      "ENTJ": "Commander",
+      "ENTP": "Debater",
+      "INFJ": "Advocate",
+      "INFP": "Mediator",
+      "ENFJ": "Protagonist",
+      "ENFP": "Campaigner",
+      "ISTJ": "Logistician",
+      "ISFJ": "Defender",
+      "ESTJ": "Executive",
+      "ESFJ": "Consul",
+      "ISTP": "Virtuoso",
+      "ISFP": "Adventurer",
+      "ESTP": "Entrepreneur",
+      "ESFP": "Entertainer"
+    }
+  },
+  "Personas": {
+    "title": "AI Personas",
+    "subtitle": "Choose your chatbot personality",
+    "createNew": "Create New",
+    "edit": "Edit",
+    "delete": "Delete",
+    "select": "Select",
+    "selected": "Selected",
+    "parameters": {
+      "creativity": "Creativity",
+      "empathy": "Empathy",
+      "analyticalThinking": "Analytical Thinking",
+      "friendliness": "Friendliness",
+      "formality": "Formality"
+    },
+    "presets": {
+      "mentor": "Mentor",
+      "friend": "Friend",
+      "teacher": "Teacher",
+      "coach": "Coach",
+      "assistant": "Assistant"
+    }
+  },
+  "Settings": {
+    "title": "Settings",
+    "sections": {
+      "general": "General",
+      "appearance": "Appearance",
+      "notifications": "Notifications",
+      "privacy": "Privacy",
+      "language": "Language"
+    },
+    "theme": {
+      "label": "Theme",
+      "light": "Light",
+      "dark": "Dark",
+      "system": "System",
+      "toggle": "Toggle theme"
+    },
+    "language": {
+      "label": "Language",
+      "japanese": "日本語",
+      "english": "English"
+    }
+  },
+  "Errors": {
+    "404": "Page not found",
+    "500": "Server error",
+    "generic": "An error occurred",
+    "networkError": "Network error",
+    "unauthorized": "Authentication required",
+    "forbidden": "Access denied"
+  }
+}
