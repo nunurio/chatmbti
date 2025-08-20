@@ -38,6 +38,10 @@ This is a Next.js 15 chat application with AI integration using LangChain/LangGr
 ### Project Structure
 
 ```
+supabase/
+├── schemas/                           # 宣言的データベーススキーマ定義
+└── migrations/                        # 自動生成マイグレーション（変更禁止）
+
 src/
 ├── app/
 │   ├── (auth)/
@@ -110,10 +114,10 @@ src/
 ├── hooks/
 │   └── use-local-storage.ts
 └── lib/
+    ├── database.types.ts              # DB型定義（Supabase自動生成）
     ├── supabase/
     │   ├── client.ts                 # Supabaseクライアント
-    │   ├── auth.ts                   # 認証ヘルパー
-    │   └── database.types.ts         # DB型定義
+    │   └── auth.ts                   # 認証ヘルパー
     ├── mbti/
     │   ├── calculator.ts             # MBTI判定ロジック
     │   ├── recommendations.ts        # 推奨アルゴリズム
@@ -212,6 +216,14 @@ SUPABASE_ANON_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 5. **RLS & Security**: All Supabase tables enable RLS with policies defined in the design. Client inserts are restricted (e.g., only `role='user'` messages). Server-side writes for `assistant/system` messages use service role.
 
 6. **SSE Headers**: Set `Content-Type: text/event-stream`, `Cache-Control: no-cache, no-transform`, `Connection: keep-alive` and `export const dynamic = 'force-dynamic'` in route handlers.
+
+### Database Management
+
+**重要な制約事項:**
+- **データベース構造**: Supabaseを使用。`supabase/schemas/`に保存されている宣言的スキーマファイルをDB構造の参照元として使用すること
+- **マイグレーション**: `migrations/`フォルダの内容は**絶対に変更しないこと**（自動生成されたマイグレーションファイル）
+- **型定義**: `@/lib/database.types.ts`にデータベースの型情報が定義されている
+- **DB変更ポリシー**: データベース構造の変更は極力避けること。変更が必要な場合は、まずユーザーに確認を求め、適切な手順を案内すること
 
 ### Development Notes
 
