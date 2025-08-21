@@ -29,7 +29,7 @@ describe('Profile Page', () => {
   });
 
   it('should render profile form elements', async () => {
-    const ProfilePage = await import('@/app/(auth)/profile/page').then(m => m.default);
+    const ProfilePage = await import('@/app/[locale]/(auth)/profile/page').then(m => m.default);
     
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,

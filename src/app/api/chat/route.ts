@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { app } from "@/ai/graph";
 
 export const runtime = "nodejs"; // Nodeランタイムの方がSDK/ライブラリ互換が広い
+export const dynamic = 'force-dynamic'; // Next.js 15でSSEキャッシュ問題を防ぐ
 
 type Msg = { role: "user" | "assistant" | "system"; content: string };
 type Body = {

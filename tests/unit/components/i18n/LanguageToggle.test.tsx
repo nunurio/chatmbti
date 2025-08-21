@@ -71,9 +71,11 @@ const mockMessages = {
 };
 
 describe('LanguageToggle', () => {
+  let user: ReturnType<typeof userEvent.setup>;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    user = userEvent.setup();
     mockLanguageContext.locale = 'ja';
     mockLanguageContext.isChanging = false;
   });

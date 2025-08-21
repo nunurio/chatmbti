@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import Page from '@/app/(auth)/signup/page'
+import Page from '@/app/[locale]/(auth)/signup/page'
 
 // Mock LoginForm component
 vi.mock('@/components/auth/LoginForm', () => ({
