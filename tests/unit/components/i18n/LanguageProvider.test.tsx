@@ -60,14 +60,18 @@ describe('LanguageProvider', () => {
     replace: vi.fn(),
   };
   
-  const mockSupabaseClient = {
-    from: vi.fn(() => ({
-      update: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          select: vi.fn(() => Promise.resolve({ error: null })),
-        })),
-      })),
+  const mockUpdate = vi.fn(() => ({
+    eq: vi.fn(() => ({
+      select: vi.fn(() => Promise.resolve({ error: null })),
     })),
+  }));
+  
+  const mockFrom = vi.fn(() => ({
+    update: mockUpdate,
+  }));
+  
+  const mockSupabaseClient = {
+    from: mockFrom,
     auth: {
       getUser: vi.fn(() => Promise.resolve({ 
         data: { user: { id: 'test-user-id' } },
@@ -130,8 +134,8 @@ describe('LanguageProvider', () => {
     });
 
     await waitFor(() => {
-      expect(mockSupabaseClient.from).toHaveBeenCalledWith('profiles');
-      expect(mockSupabaseClient.from().update).toHaveBeenCalledWith({ locale: 'en' });
+      expect(mockFrom).toHaveBeenCalledWith('profiles');
+      expect(mockUpdate).toHaveBeenCalledWith({ locale: 'en' });
     });
   });
 
@@ -191,9 +195,29 @@ describe('LanguageProvider', () => {
 
   it('handles errors gracefully during language switch', async () => {
     // Mock Supabase error
-    mockSupabaseClient.from().update().eq().select.mockResolvedValue({
-      error: { message: 'Database error' }
-    });
+    const mockEq = vi.fn(() => ({
+      select: vi.fn(() => Promise.resolve({ error: { message: 'Database error' } })),
+    }));
+    
+    const mockUpdateError = vi.fn(() => ({
+      eq: mockEq,
+    }));
+    
+    const mockFromError = vi.fn(() => ({
+      update: mockUpdateError,
+    }));
+    
+    const mockSupabaseClientError = {
+      from: mockFromError,
+      auth: {
+        getUser: vi.fn(() => Promise.resolve({ 
+          data: { user: { id: 'test-user-id' } },
+          error: null 
+        })),
+      },
+    };
+    
+    (createBrowserClient as any).mockReturnValue(mockSupabaseClientError);
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 

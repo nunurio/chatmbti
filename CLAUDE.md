@@ -270,3 +270,26 @@ This project follows the TDD approach, inspired by the methodology of Takuto Wad
 - All operations to understand the project structure, implementation details, and read files must be performed using Serena MCP.
 - Use the Playwright MCP to verify implementation details, especially for UI-related tasks by taking screenshots.
  - 【重要】**Playwright MCP を起動する際は、必ず `playwright-ui-verification` サブエージェントに起動させること（必須）**
+
+## Task Management Guidelines (.kiro/specs/mbti-chatbot-system/tasks.md)
+
+**重要**: `tasks.md`ファイルは、チェックリスト形式（`- [ ]` または `- [x]`）のタスク一覧として管理すること。
+
+### tasks.mdの記載ルール
+
+1. **必須形式**: 全てのタスクは `- [ ]`（未完了）または `- [x]`（完了）のチェックボックス形式で記載
+2. **構造**: タスクは階層構造で整理し、サブタスクはインデントで表現
+3. **完了記録**: 完了したタスクには完了日を記載（例: `✅ 2025-08-21完了`）
+4. **優先度**: 必要に応じて `**[Phase 1]**`、`**[Phase 2]**`、`**[Phase 3]**` のようなフェーズマーカーを追加
+
+### 禁止事項
+
+- **説明文の追加禁止**: 冒頭や末尾に戦略分析、実装推奨順序、技術的注意事項などの説明文を追加しない
+- **非チェックリスト形式の禁止**: Markdown見出しだけの項目や、箇条書きのみの説明は記載しない
+- **詳細情報の記載場所**: 技術的詳細、実装戦略、ベストプラクティスなどは `design.md` または `requirements.md` に記載
+
+### 推奨事項
+
+- **簡潔な記載**: 各タスクは1行で簡潔に記載し、詳細はサブタスクで表現
+- **要件参照**: 関連する要件番号を記載（例: `_要件: 1.1, 1.2_`）
+- **定期的な整理**: 完了済みタスクは定期的に整理し、現在進行中のタスクを明確化
