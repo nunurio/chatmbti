@@ -40,16 +40,16 @@ describe('Profile Page', () => {
 
     // Wait for loading to complete
     await waitFor(() => {
-      expect(screen.queryByText('読み込み中...')).not.toBeInTheDocument();
+      expect(screen.queryByText('loading')).not.toBeInTheDocument();
     });
 
-    expect(screen.getByText('プロフィール設定')).toBeInTheDocument();
-    expect(screen.getByLabelText('表示名')).toBeInTheDocument();
-    expect(screen.getByText('MBTIタイプ')).toBeInTheDocument();
+    expect(screen.getByText('title')).toBeInTheDocument();
+    expect(screen.getByLabelText('displayName')).toBeInTheDocument();
+    expect(screen.getByText('mbtiType')).toBeInTheDocument();
   });
 
   it('should display current profile data', async () => {
-    const ProfilePage = await import('@/app/(auth)/profile/page').then(m => m.default);
+    const ProfilePage = await import('@/app/[locale]/(auth)/profile/page').then(m => m.default);
     
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
@@ -64,7 +64,7 @@ describe('Profile Page', () => {
   });
 
   it('should display all MBTI types as options', async () => {
-    const ProfilePage = await import('@/app/(auth)/profile/page').then(m => m.default);
+    const ProfilePage = await import('@/app/[locale]/(auth)/profile/page').then(m => m.default);
     
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
@@ -75,7 +75,7 @@ describe('Profile Page', () => {
 
     // Wait for loading to complete
     await waitFor(() => {
-      expect(screen.queryByText('読み込み中...')).not.toBeInTheDocument();
+      expect(screen.queryByText('loading')).not.toBeInTheDocument();
     });
 
     const mbtiTypes = [
@@ -89,11 +89,11 @@ describe('Profile Page', () => {
       expect(screen.getByText(type)).toBeInTheDocument();
     }
     
-    expect(screen.getByText('わからない')).toBeInTheDocument();
+    expect(screen.getByText('unknown')).toBeInTheDocument();
   });
 
   it('should highlight current MBTI type', async () => {
-    const ProfilePage = await import('@/app/(auth)/profile/page').then(m => m.default);
+    const ProfilePage = await import('@/app/[locale]/(auth)/profile/page').then(m => m.default);
     
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
@@ -110,7 +110,7 @@ describe('Profile Page', () => {
 
   it('should allow MBTI type selection', async () => {
     const user = userEvent.setup();
-    const ProfilePage = await import('@/app/(auth)/profile/page').then(m => m.default);
+    const ProfilePage = await import('@/app/[locale]/(auth)/profile/page').then(m => m.default);
     
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
@@ -131,7 +131,7 @@ describe('Profile Page', () => {
 
   it('should update display name', async () => {
     const user = userEvent.setup();
-    const ProfilePage = await import('@/app/(auth)/profile/page').then(m => m.default);
+    const ProfilePage = await import('@/app/[locale]/(auth)/profile/page').then(m => m.default);
     
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
@@ -144,7 +144,7 @@ describe('Profile Page', () => {
       expect(screen.getByDisplayValue('Test User')).toBeInTheDocument();
     });
 
-    const displayNameInput = screen.getByLabelText('表示名');
+    const displayNameInput = screen.getByLabelText('displayName');
     await user.clear(displayNameInput);
     await user.type(displayNameInput, 'Updated Name');
 
@@ -153,7 +153,7 @@ describe('Profile Page', () => {
 
   it('should save profile successfully', async () => {
     const user = userEvent.setup();
-    const ProfilePage = await import('@/app/(auth)/profile/page').then(m => m.default);
+    const ProfilePage = await import('@/app/[locale]/(auth)/profile/page').then(m => m.default);
     
     (global.fetch as any)
       .mockResolvedValueOnce({
@@ -171,11 +171,11 @@ describe('Profile Page', () => {
       expect(screen.getByDisplayValue('Test User')).toBeInTheDocument();
     });
 
-    const displayNameInput = screen.getByLabelText('表示名');
+    const displayNameInput = screen.getByLabelText('displayName');
     await user.clear(displayNameInput);
     await user.type(displayNameInput, 'Updated Name');
 
-    const saveButton = screen.getByRole('button', { name: /保存/ });
+    const saveButton = screen.getByRole('button', { name: /save/ });
     await user.click(saveButton);
 
     await waitFor(() => {
@@ -192,7 +192,7 @@ describe('Profile Page', () => {
 
   it('should display error when profile save fails', async () => {
     const user = userEvent.setup();
-    const ProfilePage = await import('@/app/(auth)/profile/page').then(m => m.default);
+    const ProfilePage = await import('@/app/[locale]/(auth)/profile/page').then(m => m.default);
     
     (global.fetch as any)
       .mockResolvedValueOnce({
@@ -210,17 +210,17 @@ describe('Profile Page', () => {
       expect(screen.getByDisplayValue('Test User')).toBeInTheDocument();
     });
 
-    const saveButton = screen.getByRole('button', { name: /保存/ });
+    const saveButton = screen.getByRole('button', { name: /save/ });
     await user.click(saveButton);
 
     await waitFor(() => {
-      expect(screen.getByText('保存に失敗しました')).toBeInTheDocument();
+      expect(screen.getByText('errors.saveFailed')).toBeInTheDocument();
     });
   });
 
   it('should handle "わからない" option selection', async () => {
     const user = userEvent.setup();
-    const ProfilePage = await import('@/app/(auth)/profile/page').then(m => m.default);
+    const ProfilePage = await import('@/app/[locale]/(auth)/profile/page').then(m => m.default);
     
     (global.fetch as any).mockResolvedValueOnce({
       ok: true,
@@ -233,19 +233,19 @@ describe('Profile Page', () => {
       expect(screen.getByDisplayValue('Test User')).toBeInTheDocument();
     });
 
-    const unknownButton = screen.getByRole('button', { name: /わからない/ });
+    const unknownButton = screen.getByRole('button', { name: /unknown/ });
     await user.click(unknownButton);
 
     expect(unknownButton).toHaveClass('ring-2');
   });
 
   it('should show loading state when fetching profile', async () => {
-    const ProfilePage = await import('@/app/(auth)/profile/page').then(m => m.default);
+    const ProfilePage = await import('@/app/[locale]/(auth)/profile/page').then(m => m.default);
     
     (global.fetch as any).mockImplementation(() => new Promise(() => {})); // Never resolves
 
     render(<ProfilePage />);
 
-    expect(screen.getByText('読み込み中...')).toBeInTheDocument();
+    expect(screen.getByText('loading')).toBeInTheDocument();
   });
 });

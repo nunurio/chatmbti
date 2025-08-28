@@ -23,6 +23,7 @@ export function DiagnosisForm({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState<FormErrors>({})
   const [showTimeEstimate] = useState(true)
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false)
 
   // Update answers when existingAnswers prop changes
   useEffect(() => {
@@ -64,6 +65,10 @@ export function DiagnosisForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setHasAttemptedSubmit(true)
+    
+    // Debug log for testing
+    console.log('Form submitted, hasUnansweredQuestions:', hasUnansweredQuestions, 'answers:', answers)
     
     if (!validateForm()) {
       return
@@ -98,7 +103,7 @@ export function DiagnosisForm({
 
       <form onSubmit={(e) => void handleSubmit(e)} role="form" className="space-y-8">
         {/* Error Summary */}
-        {(Object.keys(errors).length > 0 || hasUnansweredQuestions) && (
+        {(Object.keys(errors).length > 0 || (hasAttemptedSubmit && hasUnansweredQuestions)) && (
           <div
             role="alert"
             aria-live="polite"
@@ -109,7 +114,7 @@ export function DiagnosisForm({
             </h3>
             <ul className="text-sm text-destructive space-y-1">
               {errors._form && <li>• {errors._form}</li>}
-              {hasUnansweredQuestions && (
+              {hasAttemptedSubmit && hasUnansweredQuestions && (
                 <li>• Please answer all questions before continuing</li>
               )}
               {Object.entries(errors)

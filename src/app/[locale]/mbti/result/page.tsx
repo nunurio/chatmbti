@@ -98,17 +98,17 @@ async function ResultContent({ testId }: { testId?: string }) {
     }
   }
 
-  async function handleRetakeTest() {
+  function handleRetakeTest() {
     'use server'
     redirect('/mbti/diagnosis')
   }
 
-  async function handleStartChat() {
+  function handleStartChat() {
     'use server'
     redirect('/chat')
   }
 
-  async function handlePersonaSelect(persona: { id: string }) {
+  function handlePersonaSelect(persona: { id: string }) {
     'use server'
     redirect(`/chat?persona=${persona.id}`)
   }
@@ -118,9 +118,9 @@ async function ResultContent({ testId }: { testId?: string }) {
       result={mbtiResult}
       recommendations={recommendations}
       onSave={(result) => void handleSave(result)}
-      onRetakeTest={handleRetakeTest}
-      onStartChat={handleStartChat}
-      onPersonaSelect={handlePersonaSelect}
+      onRetakeTest={() => void handleRetakeTest()}
+      onStartChat={() => void handleStartChat()}
+      onPersonaSelect={(persona) => void handlePersonaSelect(persona)}
     />
   )
 }

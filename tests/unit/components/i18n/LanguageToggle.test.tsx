@@ -104,8 +104,8 @@ describe('LanguageToggle', () => {
     const select = screen.getByRole('combobox');
     await user.click(select);
     
-    // Should show both language options
-    expect(screen.getByText('日本語')).toBeInTheDocument();
+    // Should show both language options in the dropdown
+    expect(screen.getAllByText('日本語')).toHaveLength(2); // One in selected value, one in dropdown
     expect(screen.getByText('English')).toBeInTheDocument();
   });
 

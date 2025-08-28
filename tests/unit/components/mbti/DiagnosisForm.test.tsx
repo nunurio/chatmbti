@@ -149,7 +149,11 @@ describe('DiagnosisForm', () => {
       await user.click(screen.getByRole('button', { name: /next/i }))
       
       // Should show validation errors
-      expect(screen.getByText(/please answer all questions/i)).toBeInTheDocument()
+      await waitFor(() => {
+        const errorAlert = screen.getByRole('alert')
+        expect(errorAlert).toBeInTheDocument()
+        expect(errorAlert).toHaveTextContent(/please answer all questions before continuing/i)
+      })
       expect(onStepComplete).not.toHaveBeenCalled()
     })
 
@@ -204,9 +208,12 @@ describe('DiagnosisForm', () => {
       // Submit without answers
       await user.click(screen.getByRole('button', { name: /next/i }))
       
-      // Should show field-level errors
-      const errorMessages = screen.getAllByRole('alert')
-      expect(errorMessages.length).toBeGreaterThan(0)
+      // Should show error alert
+      await waitFor(() => {
+        const errorMessage = screen.getByRole('alert')
+        expect(errorMessage).toBeInTheDocument()
+        expect(errorMessage).toHaveTextContent(/Please fix the following errors/i)
+      })
     })
 
     it('should clear validation errors when questions are answered', async () => {
@@ -215,14 +222,19 @@ describe('DiagnosisForm', () => {
       
       // Submit without answers to trigger validation
       await user.click(screen.getByRole('button', { name: /next/i }))
-      expect(screen.getByText(/please answer all questions/i)).toBeInTheDocument()
+      await waitFor(() => {
+        const errorAlert = screen.getByRole('alert')
+        expect(errorAlert).toHaveTextContent(/please answer all questions before continuing/i)
+      })
       
       // Answer the questions
       await user.click(screen.getAllByDisplayValue('2')[0])
       await user.click(screen.getAllByDisplayValue('7')[1])
       
       // Error should be cleared
-      expect(screen.queryByText(/please answer all questions/i)).not.toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      })
     })
 
     it('should validate individual questions in real-time', async () => {
@@ -230,7 +242,7 @@ describe('DiagnosisForm', () => {
       render(<DiagnosisForm {...defaultProps} />)
       
       // Initially should not show validation errors
-      expect(screen.queryByText(/please answer all questions/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/please answer all questions before continuing/i)).not.toBeInTheDocument()
       
       // Focus and blur first question without selecting - errors only show on submit
       const firstRadio = screen.getAllByRole('radio')[0]
@@ -262,9 +274,10 @@ describe('DiagnosisForm', () => {
       await user.tab() // First question, first option
       await user.keyboard('{ArrowRight}') // Second option in first question
       
-      // Should navigate within radio group
+      // Should navigate within radio group - check that active element is a radio button
       const radioButtons = screen.getAllByRole('radio')
-      expect(radioButtons[1]).toHaveFocus()
+      expect(radioButtons.length).toBeGreaterThan(1)
+      expect(document.activeElement).toBe(radioButtons[1])
     })
   })
 
@@ -340,15 +353,20 @@ describe('DiagnosisForm', () => {
       // Trigger validation
       await user.click(screen.getByRole('button', { name: /next/i }))
       
-      const errorSummary = screen.getByRole('alert')
-      expect(errorSummary).toHaveAttribute('aria-live', 'polite')
+      await waitFor(() => {
+        const errorSummary = screen.getByRole('alert')
+        expect(errorSummary).toHaveAttribute('aria-live', 'polite')
+      })
     })
 
     it('should announce progress changes to screen readers', () => {
       render(<DiagnosisForm {...defaultProps} currentStep={5} />)
       
-      const progressBar = screen.getByRole('progressbar')
-      expect(progressBar).toHaveAttribute('aria-live', 'polite')
+      const progressBars = screen.getAllByRole('progressbar')
+      // Should have at least one progress bar with aria-live attribute
+      expect(progressBars.length).toBeGreaterThan(0)
+      const mainProgressBar = progressBars[0] // Use the first one (DiagnosisProgress)
+      expect(mainProgressBar).toHaveAttribute('aria-live', 'polite')
     })
   })
 })

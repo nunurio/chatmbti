@@ -64,7 +64,7 @@ export default async function DiagnosisPage({
 
   // Create server actions
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async function handleStepComplete(_answers: Record<string, number>) {
+  async function handleStepComplete(_answers: Record<string, number>): Promise<void> {
     'use server'
     
     // In a production implementation, this would integrate with the DiagnosisService
@@ -80,13 +80,13 @@ export default async function DiagnosisPage({
     }
   }
 
-  async function handleBack() {
-  'use server'
-  
-  if (currentStep > 1) {
-    redirect(`/${locale}/mbti/diagnosis?step=${currentStep - 1}&testId=${currentTestId}`)
+  async function handleBack(): Promise<void> {
+    'use server'
+    
+    if (currentStep > 1) {
+      redirect(`/${locale}/mbti/diagnosis?step=${currentStep - 1}&testId=${currentTestId}`)
+    }
   }
-}
 
   return (
     <ProtectedRoute>

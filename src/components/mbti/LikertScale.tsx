@@ -64,6 +64,7 @@ export function LikertScale({
                 "sr-only", // Hide visually but keep for accessibility
               )}
               aria-describedby={error ? errorId : undefined}
+              aria-invalid={error ? 'true' : undefined}
             />
             
             {/* Visual Radio Indicator */}

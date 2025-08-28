@@ -145,7 +145,9 @@ describe('DiagnosisProgress', () => {
       render(<DiagnosisProgress {...defaultProps} />)
       
       const progressBar = screen.getByRole('progressbar')
-      expect(progressBar).toHaveAttribute('tabIndex', '0')
+      // Progress bars don't need to be focusable, but should have proper ARIA attributes
+      expect(progressBar).toHaveAttribute('role', 'progressbar')
+      expect(progressBar).toHaveAttribute('aria-label', expect.stringContaining('診断の進捗'))
     })
 
     it('should provide screen reader friendly text', () => {

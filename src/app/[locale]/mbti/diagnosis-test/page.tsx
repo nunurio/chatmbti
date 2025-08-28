@@ -44,7 +44,7 @@ export default async function DiagnosisTestPage({
   const currentTestId = testId || 'test-id-' + Date.now()
 
   // Mock server actions for testing
-  async function handleStepComplete(_answers: Record<string, number>) {
+  async function handleStepComplete(_answers: Record<string, number>): Promise<void> {
     'use server'
     console.log('Mock step complete:', _answers)
     // For testing, just redirect to next step
@@ -53,7 +53,7 @@ export default async function DiagnosisTestPage({
     }
   }
 
-  async function handleBack() {
+  async function handleBack(): Promise<void> {
     'use server'
     console.log('Mock back action')
     // Would redirect to previous step

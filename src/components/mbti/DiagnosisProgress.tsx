@@ -54,7 +54,7 @@ export function DiagnosisProgress({
           aria-valuemin={0}
           aria-valuemax={totalSteps}
           aria-label={`診断の進捗: ステップ${currentStep}/${totalSteps}、${progressPercentage}%完了`}
-          tabIndex={0}
+          aria-live="polite"
         />
       </div>
 
